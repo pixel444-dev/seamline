@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using Seamline.Desktop.Adb;
+using Seamline.Desktop.Input;
 
 namespace Seamline.Desktop;
 
@@ -8,6 +9,7 @@ public partial class MainWindow : Window
     private readonly AdbClient _adb = AdbClient.Locate();
     private DeviceSession? _session;
     private MirrorWindow? _mirror;
+    private CursorBridge? _bridge;
 
     public MainWindow()
     {
@@ -43,6 +45,12 @@ public partial class MainWindow : Window
             _mirror = new MirrorWindow(_session, Log);
             _mirror.Closed += async (_, _) => await DisconnectAsync();
             _mirror.Show();
+            _session.ConnectionLost += () => Dispatcher.BeginInvoke(async () =>
+            {
+                Log("A conexão com o celular caiu.");
+                await DisconnectAsync();
+            });
+            UpdateBridge();
         }
         catch (Exception ex)
         {
@@ -94,6 +102,8 @@ public partial class MainWindow : Window
             return;
         var session = _session;
         _session = null;
+        _bridge?.Dispose();
+        _bridge = null;
         var mirror = _mirror;
         _mirror = null;
         mirror?.Close();
@@ -102,6 +112,31 @@ public partial class MainWindow : Window
         ConnectButton.Content = "Conectar";
         PingButton.IsEnabled = false;
         Log("Desconectado.");
+    }
+
+    private void BridgeCheck_Changed(object sender, RoutedEventArgs e) => UpdateBridge();
+
+    /// <summary>Liga ou desliga a passagem do mouse pela borda, conforme a caixa de seleção.</summary>
+    private void UpdateBridge()
+    {
+        var wanted = _session is not null && BridgeCheck.IsChecked == true;
+        if (wanted && _bridge is null)
+        {
+            try
+            {
+                _bridge = new CursorBridge(_session!, Log);
+                Log("Leve o cursor até a borda esquerda do monitor para controlar o celular.");
+            }
+            catch (Exception ex)
+            {
+                Log($"Não consegui ativar o mouse no celular: {ex.Message}");
+            }
+        }
+        else if (!wanted && _bridge is not null)
+        {
+            _bridge.Dispose();
+            _bridge = null;
+        }
     }
 
     private void Log(string line)

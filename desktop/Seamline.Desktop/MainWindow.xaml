@@ -13,6 +13,9 @@
                 <Button x:Name="ConnectButton" Content="Conectar" Padding="12,4" Click="ConnectButton_Click" />
                 <Button x:Name="PingButton" Content="Testar (ping)" Padding="12,4" Margin="6,0,0,0" IsEnabled="False" Click="PingButton_Click" />
             </StackPanel>
+            <CheckBox x:Name="BridgeCheck" Margin="0,8,0,0" IsChecked="True"
+                      Checked="BridgeCheck_Changed" Unchecked="BridgeCheck_Changed"
+                      Content="Mouse e teclado vão para o celular pela borda esquerda do monitor (voltar: empurre pela borda direita do celular ou Ctrl+Alt+Esc)" />
             <TextBlock x:Name="StatusText" Margin="0,8,0,0" Text="Desconectado." />
             <TextBlock Text="Registro" FontWeight="SemiBold" Margin="0,12,0,4" />
         </StackPanel>

@@ -24,7 +24,7 @@ public sealed record DeviceInfo(string Manufacturer, string Model, string Androi
 /// </summary>
 public sealed class DeviceSession : IAsyncDisposable
 {
-    public const int ProtocolVersion = 2;
+    public const int ProtocolVersion = 3;
     /// <summary>Maior lado do vídeo, em pixels. A tela do celular é reduzida para caber.</summary>
     public const int MaxVideoSize = 1600;
     private const string RemoteApkPath = "/data/local/tmp/seamline-server.apk";
@@ -37,11 +37,20 @@ public sealed class DeviceSession : IAsyncDisposable
     private readonly Process _serverProcess;
     private readonly MessageChannel _channel;
     private readonly TcpClient _videoClient;
+    private readonly CancellationTokenSource _closing = new();
+    private readonly HashSet<object> _keyboardUsers = [];
+    private TaskCompletionSource? _pong;
 
     public DeviceInfo Info { get; }
     public VideoStream Video { get; }
     public int VideoWidth { get; }
     public int VideoHeight { get; }
+
+    /// <summary>O celular mandou o cursor de volta para o PC (posição de 0 a 1 ao longo da borda). Vem de outra thread.</summary>
+    public event Action<double>? PointerLeft;
+
+    /// <summary>A conexão de controle caiu sem o PC pedir. Vem de outra thread.</summary>
+    public event Action? ConnectionLost;
 
     private DeviceSession(AdbClient adb, string serial, int localPort, Process serverProcess, MessageChannel channel,
         DeviceInfo info, TcpClient videoClient, VideoStream video, int videoWidth, int videoHeight)
@@ -90,7 +99,9 @@ public sealed class DeviceSession : IAsyncDisposable
             var (width, height) = await Task.Run(video.ReadHeader, ct).WaitAsync(TimeSpan.FromSeconds(10), ct);
             log($"Vídeo: {width}x{height}");
 
-            return new DeviceSession(adb, serial, localPort, process, channel, info, videoClient, video, width, height);
+            var session = new DeviceSession(adb, serial, localPort, process, channel, info, videoClient, video, width, height);
+            _ = Task.Run(session.ReceiveLoop);
+            return session;
         }
         catch
         {
@@ -157,16 +168,72 @@ public sealed class DeviceSession : IAsyncDisposable
     /// <summary>Mede o tempo de ida e volta de uma mensagem até o celular.</summary>
     public async Task<TimeSpan> PingAsync(CancellationToken ct = default)
     {
+        var pong = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pong = pong;
         var watch = Stopwatch.StartNew();
         await _channel.SendAsync(new JsonObject { ["type"] = "ping" }, ct);
-        var reply = await _channel.ReceiveAsync(ct) ?? throw new IOException("O celular fechou a conexão.");
-        if ((string?)reply["type"] != "pong")
-            throw new InvalidDataException($"Resposta inesperada: {reply.ToJsonString()}");
+        await pong.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
         return watch.Elapsed;
+    }
+
+    /// <summary>
+    /// O teclado virtual do celular só existe enquanto alguém usa (o cursor no celular ou a janela
+    /// do espelho em foco), porque com ele conectado o Android esconde o teclado da tela.
+    /// </summary>
+    public void SetKeyboardActive(object user, bool active)
+    {
+        bool changed;
+        lock (_keyboardUsers)
+        {
+            var wasAttached = _keyboardUsers.Count > 0;
+            if (active) _keyboardUsers.Add(user); else _keyboardUsers.Remove(user);
+            changed = wasAttached != _keyboardUsers.Count > 0;
+        }
+        if (changed)
+            _ = SendQuietlyAsync(new JsonObject { ["type"] = "keyboard", ["attached"] = active });
+    }
+
+    private async Task SendQuietlyAsync(JsonObject message)
+    {
+        try
+        {
+            await _channel.SendAsync(message);
+        }
+        catch (Exception e) when (e is IOException or ObjectDisposedException)
+        {
+            // A conexão caiu; o ReceiveLoop avisa.
+        }
+    }
+
+    /// <summary>Lê as mensagens que o celular manda por conta própria (pong, pointer_leave).</summary>
+    private async Task ReceiveLoop()
+    {
+        try
+        {
+            while (await _channel.ReceiveAsync(_closing.Token) is { } message)
+            {
+                switch ((string?)message["type"])
+                {
+                    case "pong":
+                        _pong?.TrySetResult();
+                        break;
+                    case "pointer_leave":
+                        PointerLeft?.Invoke((double?)message["position"] ?? 0.5);
+                        break;
+                }
+            }
+        }
+        catch (Exception e) when (e is IOException or ObjectDisposedException or OperationCanceledException
+                                      or InvalidDataException or System.Text.Json.JsonException)
+        {
+        }
+        if (!_closing.IsCancellationRequested)
+            ConnectionLost?.Invoke();
     }
 
     public async ValueTask DisposeAsync()
     {
+        _closing.Cancel();
         try
         {
             await _channel.SendAsync(new JsonObject { ["type"] = "bye" });

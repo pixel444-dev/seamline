@@ -17,7 +17,7 @@ import kotlin.system.exitProcess
  * criar telas virtuais e injetar toques.
  */
 object Server {
-    const val PROTOCOL_VERSION = 2
+    const val PROTOCOL_VERSION = 3
     private const val SOCKET_NAME = "seamline"
     private const val DEFAULT_MAX_SIZE = 1600
 
@@ -53,7 +53,11 @@ object Server {
         }
 
         control.use {
-            serve(MessageChannel(it.inputStream, it.outputStream), InputInjector())
+            val channel = MessageChannel(it.inputStream, it.outputStream)
+            val bridge = PointerBridge { position ->
+                channel.send(JSONObject().put("type", "pointer_leave").put("position", position.toDouble()))
+            }
+            bridge.use { serve(channel, InputInjector(), bridge) }
         }
         println("PC desconectou.")
         // app_process pode deixar threads do sistema vivas; saímos explicitamente.
@@ -73,11 +77,11 @@ object Server {
             .put("screenHeight", screen.height)
     }
 
-    private fun serve(channel: MessageChannel, input: InputInjector) {
+    private fun serve(channel: MessageChannel, input: InputInjector, bridge: PointerBridge) {
         while (true) {
             val message = channel.receive() ?: return
             try {
-                if (!handle(message, channel, input)) return
+                if (!handle(message, channel, input, bridge)) return
             } catch (e: Exception) {
                 // Uma mensagem com problema não deve derrubar a conexão inteira.
                 println("Erro ao processar ${message.optString("type")}: $e")
@@ -86,7 +90,7 @@ object Server {
     }
 
     /** Retorna false quando o PC pediu para encerrar. */
-    private fun handle(message: JSONObject, channel: MessageChannel, input: InputInjector): Boolean {
+    private fun handle(message: JSONObject, channel: MessageChannel, input: InputInjector, bridge: PointerBridge): Boolean {
         when (val type = message.optString("type")) {
             "ping" -> channel.send(JSONObject().put("type", "pong"))
             "touch" -> touchAction(message.optString("action"))?.let {
@@ -98,11 +102,24 @@ object Server {
             )
             "key" -> keyCode(message.optString("key"))?.let(input::pressKey)
                 ?: println("Tecla desconhecida: ${message.optString("key")}")
+            "pointer_enter" -> bridge.enter(
+                PointerBridge.Edge.valueOf(message.getString("edge").uppercase()),
+                message.getDouble("position").toFloat(),
+            )
+            "pointer_exit" -> bridge.exit()
+            "mouse" -> bridge.mouse(
+                message.optInt("dx"), message.optInt("dy"), message.optInt("buttons"),
+                message.optInt("wheel"), message.optInt("hwheel"),
+            )
+            "keyboard" -> bridge.setKeyboard(message.getBoolean("attached"))
+            "keys" -> bridge.keys(message.optInt("modifiers"), message.optJSONArray("keys").toIntArray())
             "bye" -> return false
             else -> println("Mensagem desconhecida: $type")
         }
         return true
     }
+
+    private fun org.json.JSONArray?.toIntArray() = IntArray(this?.length() ?: 0) { this!!.getInt(it) }
 
     private fun touchAction(name: String) = when (name) {
         "down" -> MotionEvent.ACTION_DOWN

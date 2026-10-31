@@ -9,6 +9,7 @@
     <AssemblyName>Seamline</AssemblyName>
     <!-- A conversão de cor dos quadros de vídeo usa ponteiros, por desempenho. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <!-- O "server" Android (gerado pelo Gradle em android/server) vai junto do .exe. -->

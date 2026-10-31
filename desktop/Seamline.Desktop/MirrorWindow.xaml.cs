@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Seamline.Desktop.Input;
 using Seamline.Desktop.Video;
 
 namespace Seamline.Desktop;
@@ -28,6 +29,7 @@ public partial class MirrorWindow : Window
 
     private volatile bool _closing;
     private bool _touching;
+    private readonly HidKeyboardState _keys = new();
 
     public MirrorWindow(DeviceSession session, Action<string> log)
     {
@@ -54,10 +56,17 @@ public partial class MirrorWindow : Window
             Screen.Height = double.NaN;
         };
 
+        // Com a janela em foco, o teclado do PC digita no celular.
+        Activated += (_, _) => _session.SetKeyboardActive(this, true);
+        Deactivated += (_, _) => ReleaseKeys();
+        PreviewKeyDown += (_, e) => OnKey(e, down: true);
+        PreviewKeyUp += (_, e) => OnKey(e, down: false);
+
         CompositionTarget.Rendering += OnRendering;
         Closed += (_, _) =>
         {
             _closing = true;
+            ReleaseKeys();
             CompositionTarget.Rendering -= OnRendering;
         };
 
@@ -164,6 +173,38 @@ public partial class MirrorWindow : Window
     {
         var (x, y) = Normalize(e);
         Send(new JsonObject { ["type"] = "touch", ["action"] = action, ["x"] = x, ["y"] = y });
+    }
+
+    private void OnKey(KeyEventArgs e, bool down)
+    {
+        var key = e.Key switch
+        {
+            Key.System => e.SystemKey,
+            Key.ImeProcessed => e.ImeProcessedKey,
+            Key.DeadCharProcessed => e.DeadCharProcessedKey,
+            _ => e.Key,
+        };
+        // Alt+F4 continua fechando a janela.
+        if (key == Key.F4 && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))
+            return;
+        var virtualKey = KeyInterop.VirtualKeyFromKey(key);
+        var scan = (int)Native.MapVirtualKey((uint)virtualKey, Native.MAPVK_VK_TO_VSC_EX);
+        var hid = HidKeys.FromScanCode(scan & 0xFF, (scan & 0xFF00) == 0xE000, virtualKey);
+        if (hid == 0)
+            return;
+        e.Handled = true;
+        if (down ? _keys.Press(hid) : _keys.Release(hid))
+            Send(_keys.ToMessage());
+    }
+
+    private void ReleaseKeys()
+    {
+        if (!_keys.IsEmpty)
+        {
+            _keys.Clear();
+            Send(_keys.ToMessage());
+        }
+        _session.SetKeyboardActive(this, false);
     }
 
     private void SendKey(string key) => Send(new JsonObject { ["type"] = "key", ["key"] = key });
