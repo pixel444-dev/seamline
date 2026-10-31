@@ -1,0 +1,65 @@
+<!--
+  Logo do Seamline: um celular e um monitor ligados por uma linha contínua (a "costura" entre as telas)
+  que termina numa setinha de mouse. Desenhado num quadrado de 100 x 100.
+  É a fonte única da logo no PC: o cabeçalho da janela usa este desenho, e o ícone (seamline.ico)
+  é gerado a partir dele pelo script tools/gerar-icone.cs. O ícone do Android (res/drawable) usa os mesmos caminhos.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <LinearGradientBrush x:Key="LogoTileBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#232A3D" Offset="0" />
+        <GradientStop Color="#10131C" Offset="1" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="LogoSeamBrush" StartPoint="22,68" EndPoint="68,38" MappingMode="Absolute">
+        <GradientStop Color="#2DD4BF" Offset="0" />
+        <GradientStop Color="#5B8CFF" Offset="0.55" />
+        <GradientStop Color="#A78BFA" Offset="1" />
+    </LinearGradientBrush>
+
+    <!-- Só o desenho (fundo transparente): para usar sobre o fundo escuro do app. -->
+    <DrawingGroup x:Key="LogoMark">
+        <!-- Quadrado invisível: fixa a área do desenho em 100 x 100 (para não esticar ao redimensionar). -->
+        <GeometryDrawing Brush="Transparent" Geometry="M0,0 H100 V100 H0 Z" />
+        <!-- Monitor -->
+        <GeometryDrawing Geometry="M54,24 H86 A5,5 0 0 1 91,29 V53 A5,5 0 0 1 86,58 H54 A5,5 0 0 1 49,53 V29 A5,5 0 0 1 54,24 Z M64,72 H76 M70,58 V72">
+            <GeometryDrawing.Pen>
+                <Pen Brush="#C7CEE0" Thickness="5" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" />
+            </GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <!-- Celular (preenchido com a cor do fundo para ficar "na frente") -->
+        <GeometryDrawing Brush="#161A26" Geometry="M17,30 H35 A6,6 0 0 1 41,36 V76 A6,6 0 0 1 35,82 H17 A6,6 0 0 1 11,76 V36 A6,6 0 0 1 17,30 Z">
+            <GeometryDrawing.Pen>
+                <Pen Brush="#C7CEE0" Thickness="5" LineJoin="Round" />
+            </GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <!-- A costura: sai do celular e entra no monitor -->
+        <GeometryDrawing Geometry="M26,66 C26,46 39,39 47,45 C54,50 60,49 64.5,41">
+            <GeometryDrawing.Pen>
+                <Pen Brush="{StaticResource LogoSeamBrush}" Thickness="6.5" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" />
+            </GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#2DD4BF" Geometry="M26,66 m-5,0 a5,5 0 1 0 10,0 a5,5 0 1 0 -10,0 Z" />
+        <!-- Setinha do mouse na ponta -->
+        <GeometryDrawing Brush="#FFFFFF" Geometry="M66,36 L66,55 L70.8,50.2 L74.4,58.2 L78.2,56.5 L74.7,48.7 L81.4,48.7 Z">
+            <GeometryDrawing.Pen>
+                <Pen Brush="#10131C" Thickness="2" LineJoin="Round" />
+            </GeometryDrawing.Pen>
+        </GeometryDrawing>
+    </DrawingGroup>
+
+    <DrawingImage x:Key="LogoMarkImage" Drawing="{StaticResource LogoMark}" />
+
+    <!-- Ícone completo: o desenho sobre um quadrado arredondado escuro. -->
+    <DrawingImage x:Key="LogoIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="{StaticResource LogoTileBrush}" Geometry="M23,0 H77 A23,23 0 0 1 100,23 V77 A23,23 0 0 1 77,100 H23 A23,23 0 0 1 0,77 V23 A23,23 0 0 1 23,0 Z" />
+                <!-- O desenho um pouco menor, para sobrar margem dentro do quadrado. -->
+                <ImageDrawing Rect="7,4,86,86" ImageSource="{StaticResource LogoMarkImage}" />
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+</ResourceDictionary>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema escuro do app, com a mesma cor de fundo do Seamline no PC (evita o "flash" claro ao abrir). -->
+    <style name="Theme.Seamline" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/seamline_background</item>
+        <item name="android:windowSplashScreenBackground">@color/seamline_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <color name="seamline_background">#FF0F1117</color>
+</resources>

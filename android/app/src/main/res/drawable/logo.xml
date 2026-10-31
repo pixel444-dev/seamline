@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo completa do Seamline, para usar dentro do app.
+     Os caminhos são os mesmos da logo do PC (desktop/Seamline.Desktop/Assets/Logo.xaml), num quadrado de 100 x 100. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path android:pathData="M23,0 H77 A23,23 0 0 1 100,23 V77 A23,23 0 0 1 77,100 H23 A23,23 0 0 1 0,77 V23 A23,23 0 0 1 23,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="100"
+                android:endY="100"
+                android:startColor="#FF232A3D"
+                android:endColor="#FF10131C" />
+        </aapt:attr>
+    </path>
+    <group
+        android:scaleX="0.86"
+        android:scaleY="0.86"
+        android:translateX="7"
+        android:translateY="4">
+        <!-- Monitor -->
+        <path
+            android:pathData="M54,24 H86 A5,5 0 0 1 91,29 V53 A5,5 0 0 1 86,58 H54 A5,5 0 0 1 49,53 V29 A5,5 0 0 1 54,24 Z M64,72 H76 M70,58 V72"
+            android:strokeColor="#FFC7CEE0"
+            android:strokeWidth="5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <!-- Celular -->
+        <path
+            android:pathData="M17,30 H35 A6,6 0 0 1 41,36 V76 A6,6 0 0 1 35,82 H17 A6,6 0 0 1 11,76 V36 A6,6 0 0 1 17,30 Z"
+            android:fillColor="#FF161A26"
+            android:strokeColor="#FFC7CEE0"
+            android:strokeWidth="5"
+            android:strokeLineJoin="round" />
+        <!-- A costura: sai do celular e entra no monitor -->
+        <path
+            android:pathData="M26,66 C26,46 39,39 47,45 C54,50 60,49 64.5,41"
+            android:strokeWidth="6.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round">
+            <aapt:attr name="android:strokeColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="22"
+                    android:startY="68"
+                    android:endX="68"
+                    android:endY="38">
+                    <item android:color="#FF2DD4BF" android:offset="0" />
+                    <item android:color="#FF5B8CFF" android:offset="0.55" />
+                    <item android:color="#FFA78BFA" android:offset="1" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:pathData="M21,66 A5,5 0 1 0 31,66 A5,5 0 1 0 21,66 Z"
+            android:fillColor="#FF2DD4BF" />
+        <!-- Setinha do mouse na ponta -->
+        <path
+            android:pathData="M66,36 L66,55 L70.8,50.2 L74.4,58.2 L78.2,56.5 L74.7,48.7 L81.4,48.7 Z"
+            android:fillColor="#FFFFFFFF"
+            android:strokeColor="#FF10131C"
+            android:strokeWidth="2"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

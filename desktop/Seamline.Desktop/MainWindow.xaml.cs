@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using Seamline.Desktop.Adb;
 using Seamline.Desktop.Input;
 using Seamline.Desktop.PcWindows;
@@ -45,12 +46,13 @@ public partial class MainWindow : Window
         }
 
         ConnectButton.IsEnabled = false;
-        StatusText.Text = "Conectando...";
+        SetStatus("Conectando...", "StatusBusyBrush");
         try
         {
             _session = await DeviceSession.StartAsync(_adb, device.Serial, line => Dispatcher.Invoke(() => Log(line)));
-            StatusText.Text = $"Conectado a {_session.Info}";
+            SetStatus($"Conectado a {_session.Info}", "StatusOnBrush");
             ConnectButton.Content = "Desconectar";
+            ConnectButton.Style = (Style)FindResource(typeof(Button));
             PingButton.IsEnabled = true;
             BringAppButton.IsEnabled = true;
             SendWindowButton.IsEnabled = true;
@@ -72,7 +74,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Falha ao conectar.";
+            SetStatus("Falha ao conectar", "StatusErrorBrush");
             Log($"Erro: {ex.Message}");
         }
         finally
@@ -252,8 +254,9 @@ public partial class MainWindow : Window
         _mirror = null;
         mirror?.Close();
         await session.DisposeAsync();
-        StatusText.Text = "Desconectado.";
+        SetStatus("Desconectado", "StatusOffBrush");
         ConnectButton.Content = "Conectar";
+        ConnectButton.Style = (Style)FindResource("PrimaryButton");
         PingButton.IsEnabled = false;
         BringAppButton.IsEnabled = false;
         SendWindowButton.IsEnabled = false;
@@ -285,6 +288,14 @@ public partial class MainWindow : Window
             _bridge.Dispose();
             _bridge = null;
         }
+    }
+
+    /// <summary>Atualiza a etiqueta de situação no canto de cima (texto e cor da bolinha).</summary>
+    private void SetStatus(string text, string colorKey)
+    {
+        StatusText.Text = text;
+        StatusText.ToolTip = text;
+        StatusDot.Fill = (System.Windows.Media.Brush)FindResource(colorKey);
     }
 
     private void Log(string line)

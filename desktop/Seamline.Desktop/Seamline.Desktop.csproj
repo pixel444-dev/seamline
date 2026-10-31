@@ -11,6 +11,8 @@
     <!-- A conversão de cor dos quadros de vídeo usa ponteiros, por desempenho. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Ícone do .exe (gerado de Assets/Logo.xaml por tools/gerar-icone.cs). -->
+    <ApplicationIcon>Assets\seamline.ico</ApplicationIcon>
   </PropertyGroup>
 
   <!-- O "server" Android (gerado pelo Gradle em android/server) vai junto do .exe. -->
@@ -26,6 +28,10 @@
   </PropertyGroup>
   <ItemGroup Condition="Exists('$(AppApk)')">
     <None Include="$(AppApk)" Link="seamline-app.apk" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Ícone das janelas -->
+    <Resource Include="Assets\seamline.ico" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Vortice.MediaFoundation" Version="3.8.3" />
