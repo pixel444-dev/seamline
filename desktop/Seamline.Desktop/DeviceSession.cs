@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text.Json.Nodes;
 using Seamline.Desktop.Adb;
 using Seamline.Desktop.Protocol;
+using Seamline.Desktop.Video;
 
 namespace Seamline.Desktop;
 
@@ -18,11 +19,14 @@ public sealed record DeviceInfo(string Manufacturer, string Model, string Androi
 /// 1. envia o server (seamline-server.apk) para o celular;
 /// 2. cria um túnel do adb: uma porta do PC → o socket "seamline" no celular;
 /// 3. inicia o server com app_process (ele roda com permissão de "shell", como no scrcpy);
-/// 4. conecta no túnel e espera a mensagem "hello".
+/// 4. conecta no túnel e espera a mensagem "hello" (conexão de controle);
+/// 5. abre a segunda conexão, a do vídeo, e lê o tamanho do vídeo.
 /// </summary>
 public sealed class DeviceSession : IAsyncDisposable
 {
-    public const int ProtocolVersion = 1;
+    public const int ProtocolVersion = 2;
+    /// <summary>Maior lado do vídeo, em pixels. A tela do celular é reduzida para caber.</summary>
+    public const int MaxVideoSize = 1600;
     private const string RemoteApkPath = "/data/local/tmp/seamline-server.apk";
     private const string SocketName = "seamline";
     private const string ServerClass = "com.seamline.server.Server";
@@ -32,10 +36,15 @@ public sealed class DeviceSession : IAsyncDisposable
     private readonly int _localPort;
     private readonly Process _serverProcess;
     private readonly MessageChannel _channel;
+    private readonly TcpClient _videoClient;
 
     public DeviceInfo Info { get; }
+    public VideoStream Video { get; }
+    public int VideoWidth { get; }
+    public int VideoHeight { get; }
 
-    private DeviceSession(AdbClient adb, string serial, int localPort, Process serverProcess, MessageChannel channel, DeviceInfo info)
+    private DeviceSession(AdbClient adb, string serial, int localPort, Process serverProcess, MessageChannel channel,
+        DeviceInfo info, TcpClient videoClient, VideoStream video, int videoWidth, int videoHeight)
     {
         _adb = adb;
         _serial = serial;
@@ -43,6 +52,10 @@ public sealed class DeviceSession : IAsyncDisposable
         _serverProcess = serverProcess;
         _channel = channel;
         Info = info;
+        _videoClient = videoClient;
+        Video = video;
+        VideoWidth = videoWidth;
+        VideoHeight = videoHeight;
     }
 
     public static string LocalServerApk => Path.Combine(AppContext.BaseDirectory, "seamline-server.apk");
@@ -60,17 +73,29 @@ public sealed class DeviceSession : IAsyncDisposable
 
         log("Iniciando o server...");
         var process = adb.StartLongRunning(serial,
-            ["shell", $"CLASSPATH={RemoteApkPath}", "app_process", "/", ServerClass, ProtocolVersion.ToString()],
+            ["shell", $"CLASSPATH={RemoteApkPath}", "app_process", "/", ServerClass,
+                ProtocolVersion.ToString(), MaxVideoSize.ToString()],
             line => log($"[celular] {line}"));
 
+        MessageChannel? channel = null;
+        TcpClient? videoClient = null;
         try
         {
-            var (channel, info) = await ConnectAsync(localPort, process, ct);
+            (channel, var info) = await ConnectAsync(localPort, process, ct);
             log($"Conectado: {info}");
-            return new DeviceSession(adb, serial, localPort, process, channel, info);
+
+            videoClient = new TcpClient { NoDelay = true };
+            await videoClient.ConnectAsync(IPAddress.Loopback, localPort, ct);
+            var video = new VideoStream(videoClient.GetStream());
+            var (width, height) = await Task.Run(video.ReadHeader, ct).WaitAsync(TimeSpan.FromSeconds(10), ct);
+            log($"Vídeo: {width}x{height}");
+
+            return new DeviceSession(adb, serial, localPort, process, channel, info, videoClient, video, width, height);
         }
         catch
         {
+            channel?.Dispose();
+            videoClient?.Dispose();
             KillQuietly(process);
             await RemoveForwardQuietly(adb, serial, localPort);
             throw;
@@ -126,6 +151,9 @@ public sealed class DeviceSession : IAsyncDisposable
             (int?)hello["sdk"] ?? 0);
     }
 
+    /// <summary>Envia uma mensagem de controle (toque, rolagem, tecla...). Veja docs/protocolo.md.</summary>
+    public Task SendAsync(JsonObject message, CancellationToken ct = default) => _channel.SendAsync(message, ct);
+
     /// <summary>Mede o tempo de ida e volta de uma mensagem até o celular.</summary>
     public async Task<TimeSpan> PingAsync(CancellationToken ct = default)
     {
@@ -147,6 +175,7 @@ public sealed class DeviceSession : IAsyncDisposable
         {
         }
         _channel.Dispose();
+        _videoClient.Dispose();
         if (!_serverProcess.WaitForExit(1000))
             KillQuietly(_serverProcess);
         _serverProcess.Dispose();

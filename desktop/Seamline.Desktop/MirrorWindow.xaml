@@ -1,0 +1,11 @@
+<Window x:Class="Seamline.Desktop.MirrorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Seamline" Background="Black" SizeToContent="WidthAndHeight"
+        UseLayoutRounding="True">
+    <!-- Clique esquerdo = toque, direito = Voltar, do meio = Início, roda = rolar. -->
+    <Image x:Name="Screen" Stretch="Uniform" Cursor="Hand"
+           RenderOptions.BitmapScalingMode="HighQuality"
+           MouseDown="Screen_MouseDown" MouseMove="Screen_MouseMove" MouseUp="Screen_MouseUp"
+           MouseWheel="Screen_MouseWheel" LostMouseCapture="Screen_LostMouseCapture" />
+</Window>

@@ -7,6 +7,7 @@ public partial class MainWindow : Window
 {
     private readonly AdbClient _adb = AdbClient.Locate();
     private DeviceSession? _session;
+    private MirrorWindow? _mirror;
 
     public MainWindow()
     {
@@ -38,6 +39,10 @@ public partial class MainWindow : Window
             StatusText.Text = $"Conectado a {_session.Info}";
             ConnectButton.Content = "Desconectar";
             PingButton.IsEnabled = true;
+
+            _mirror = new MirrorWindow(_session, Log);
+            _mirror.Closed += async (_, _) => await DisconnectAsync();
+            _mirror.Show();
         }
         catch (Exception ex)
         {
@@ -89,6 +94,9 @@ public partial class MainWindow : Window
             return;
         var session = _session;
         _session = null;
+        var mirror = _mirror;
+        _mirror = null;
+        mirror?.Close();
         await session.DisposeAsync();
         StatusText.Text = "Desconectado.";
         ConnectButton.Content = "Conectar";

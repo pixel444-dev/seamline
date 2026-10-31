@@ -7,6 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <AssemblyName>Seamline</AssemblyName>
+    <!-- A conversão de cor dos quadros de vídeo usa ponteiros, por desempenho. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!-- O "server" Android (gerado pelo Gradle em android/server) vai junto do .exe. -->
@@ -15,6 +17,9 @@
   </PropertyGroup>
   <ItemGroup Condition="Exists('$(ServerApk)')">
     <None Include="$(ServerApk)" Link="seamline-server.apk" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Vortice.MediaFoundation" Version="3.8.3" />
   </ItemGroup>
 
 </Project>
