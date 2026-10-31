@@ -1,0 +1,58 @@
+﻿<Window x:Class="Seamline.Desktop.PairingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Parear o celular pelo Wi-Fi" SizeToContent="WidthAndHeight" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="16" Width="620">
+        <DockPanel>
+            <Border DockPanel.Dock="Left" Background="White" Padding="4" BorderBrush="#DDD" BorderThickness="1">
+                <Image x:Name="QrImage" Width="240" Height="240" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+            </Border>
+            <StackPanel Margin="16,0,0,0">
+                <TextBlock Text="Leia este QR code com o celular" FontWeight="SemiBold" FontSize="15" />
+                <TextBlock TextWrapping="Wrap" Margin="0,8,0,0">
+                    1. Deixe o PC e o celular na <Bold>mesma rede Wi-Fi</Bold>.
+                </TextBlock>
+                <TextBlock TextWrapping="Wrap" Margin="0,6,0,0">
+                    2. No celular, abra <Bold>Configurações → Opções do desenvolvedor → Depuração sem fio</Bold>
+                    e ligue a chave. (O app Seamline do celular tem um botão que abre essa tela.)
+                </TextBlock>
+                <TextBlock TextWrapping="Wrap" Margin="0,6,0,0">
+                    3. Toque em <Bold>Parear dispositivo com código QR</Bold> e aponte a câmera para este QR.
+                </TextBlock>
+                <TextBlock TextWrapping="Wrap" Margin="0,6,0,0" Foreground="Gray">
+                    O pareamento fica salvo. Das próximas vezes basta ligar a Depuração sem fio.
+                </TextBlock>
+            </StackPanel>
+        </DockPanel>
+
+        <TextBlock x:Name="StatusText" Margin="0,14,0,0" TextWrapping="Wrap" FontWeight="SemiBold"
+                   Text="Esperando o celular ler o QR code..." />
+
+        <Expander Header="Não deu certo com o QR? Parear com código de 6 dígitos" Margin="0,14,0,0">
+            <StackPanel Margin="0,8,0,0">
+                <TextBlock TextWrapping="Wrap">
+                    Na tela Depuração sem fio, toque em <Bold>Parear dispositivo com código de pareamento</Bold>.
+                    O celular mostra um código e um endereço (IP e porta). Se o PC achar o celular sozinho,
+                    o endereço já aparece preenchido aqui.
+                </TextBlock>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Endereço:" VerticalAlignment="Center" />
+                    <TextBox x:Name="AddressBox" Grid.Column="1" Margin="6,0,12,0" Padding="2" />
+                    <TextBlock Grid.Column="2" Text="Código:" VerticalAlignment="Center" />
+                    <TextBox x:Name="CodeBox" Grid.Column="3" Margin="6,0,12,0" Padding="2" MaxLength="6" />
+                    <Button x:Name="CodeButton" Grid.Column="4" Content="Parear" Padding="12,2" Click="CodeButton_Click" />
+                </Grid>
+            </StackPanel>
+        </Expander>
+
+        <Button Content="Fechar" HorizontalAlignment="Right" Padding="16,4" Margin="0,14,0,0" IsCancel="True" />
+    </StackPanel>
+</Window>

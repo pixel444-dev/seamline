@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- A janela do PC chega por uma conexão local (túnel "adb reverse" até o PC). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="false"
         android:label="Seamline"
@@ -14,6 +17,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Fase 5: uma janela do PC na tela do celular. Aberta pelo PC (exported) com a porta do túnel. -->
+        <activity
+            android:name=".RemoteWindowActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|density"
+            android:exported="true"
+            android:label="Janela do PC"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.seamline.app.pcwindow"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
     </application>
 
 </manifest>

@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -21,10 +22,11 @@ public sealed record DeviceInfo(string Manufacturer, string Model, string Androi
 /// 3. inicia o server com app_process (ele roda com permissão de "shell", como no scrcpy);
 /// 4. conecta no túnel e espera a mensagem "hello" (conexão de controle);
 /// 5. abre a segunda conexão, a do vídeo, e lê o tamanho do vídeo.
+/// Cada janela de app (Fase 3) abre mais uma conexão de vídeo, veja <see cref="OpenAppVideoAsync"/>.
 /// </summary>
 public sealed class DeviceSession : IAsyncDisposable
 {
-    public const int ProtocolVersion = 3;
+    public const int ProtocolVersion = 4;
     /// <summary>Maior lado do vídeo, em pixels. A tela do celular é reduzida para caber.</summary>
     public const int MaxVideoSize = 1600;
     private const string RemoteApkPath = "/data/local/tmp/seamline-server.apk";
@@ -42,12 +44,20 @@ public sealed class DeviceSession : IAsyncDisposable
     private TaskCompletionSource? _pong;
 
     public DeviceInfo Info { get; }
+    public AdbClient Adb => _adb;
+    public string Serial => _serial;
     public VideoStream Video { get; }
     public int VideoWidth { get; }
     public int VideoHeight { get; }
 
-    /// <summary>O celular mandou o cursor de volta para o PC (posição de 0 a 1 ao longo da borda). Vem de outra thread.</summary>
-    public event Action<double>? PointerLeft;
+    /// <summary>
+    /// O celular mandou o cursor de volta para o PC: posição de 0 a 1 ao longo da borda e, se o usuário
+    /// estava arrastando, o que vem junto ("app" ou "pc_window"). Vem de outra thread.
+    /// </summary>
+    public event Action<double, string?>? PointerLeft;
+
+    /// <summary>Notícias das janelas de app: app_opened, app_error, app_closed. Vem de outra thread.</summary>
+    public event Action<JsonObject>? AppMessage;
 
     /// <summary>A conexão de controle caiu sem o PC pedir. Vem de outra thread.</summary>
     public event Action? ConnectionLost;
@@ -165,6 +175,31 @@ public sealed class DeviceSession : IAsyncDisposable
     /// <summary>Envia uma mensagem de controle (toque, rolagem, tecla...). Veja docs/protocolo.md.</summary>
     public Task SendAsync(JsonObject message, CancellationToken ct = default) => _channel.SendAsync(message, ct);
 
+    /// <summary>
+    /// Abre a conexão de vídeo da janela de app <paramref name="windowId"/> (depois de mandar "app_open"):
+    /// conecta no túnel, manda o id e lê o tamanho do vídeo.
+    /// </summary>
+    public async Task<(TcpClient Client, VideoStream Video, int Width, int Height)> OpenAppVideoAsync(
+        int windowId, CancellationToken ct = default)
+    {
+        var client = new TcpClient { NoDelay = true };
+        try
+        {
+            await client.ConnectAsync(IPAddress.Loopback, _localPort, ct);
+            var id = new byte[4];
+            BinaryPrimitives.WriteInt32BigEndian(id, windowId);
+            await client.GetStream().WriteAsync(id, ct);
+            var video = new VideoStream(client.GetStream());
+            var (width, height) = await Task.Run(video.ReadHeader, ct).WaitAsync(TimeSpan.FromSeconds(10), ct);
+            return (client, video, width, height);
+        }
+        catch
+        {
+            client.Dispose();
+            throw;
+        }
+    }
+
     /// <summary>Mede o tempo de ida e volta de uma mensagem até o celular.</summary>
     public async Task<TimeSpan> PingAsync(CancellationToken ct = default)
     {
@@ -218,7 +253,10 @@ public sealed class DeviceSession : IAsyncDisposable
                         _pong?.TrySetResult();
                         break;
                     case "pointer_leave":
-                        PointerLeft?.Invoke((double?)message["position"] ?? 0.5);
+                        PointerLeft?.Invoke((double?)message["position"] ?? 0.5, (string?)message["drag"]);
+                        break;
+                    case "app_opened" or "app_error" or "app_closed":
+                        AppMessage?.Invoke(message);
                         break;
                 }
             }

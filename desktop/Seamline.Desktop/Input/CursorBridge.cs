@@ -16,6 +16,13 @@ namespace Seamline.Desktop.Input;
 /// "pointer_leave" e o cursor reaparece na borda esquerda do monitor, na mesma altura.
 ///
 /// Saída de emergência: Ctrl + Alt + Esc traz o cursor de volta na hora.
+///
+/// Gestos de arrastar (Fase 4):
+/// - Se o usuário sai do celular com o botão esquerdo apertado, o cursor volta "arrastando" o que
+///   estava na tela do celular: <see cref="DraggedOut"/>.
+/// - Se o usuário arrasta uma janela do PC e empurra o cursor contra a borda esquerda, a janela vai
+///   para o celular: <see cref="WindowPushed"/>. Um toque leve na borda ainda faz o "Snap" do Windows;
+///   só um empurrão maior (<see cref="WindowPushThreshold"/>) manda a janela.
 /// </summary>
 public sealed class CursorBridge : IDisposable
 {
@@ -23,6 +30,15 @@ public sealed class CursorBridge : IDisposable
     private const string PhoneEdge = "right";
     private static readonly TimeSpan Cooldown = TimeSpan.FromMilliseconds(300);
     private static readonly TimeSpan RawInputTimeout = TimeSpan.FromSeconds(1);
+
+    /// <summary>Quanto (em contagens cruas do mouse) é preciso empurrar uma janela contra a borda.</summary>
+    private const int WindowPushThreshold = 400;
+
+    /// <summary>
+    /// Voltando do celular arrastando algo, o cursor reaparece um pouco longe da borda: encostado nela,
+    /// o Windows acharia que é para encaixar a janela na metade da tela ("Snap").
+    /// </summary>
+    private const int DragReturnOffset = 60;
 
     private readonly DeviceSession _session;
     private readonly Action<string> _log;
@@ -42,6 +58,28 @@ public sealed class CursorBridge : IDisposable
     private int _hwheel;
     private readonly HidKeyboardState _keys = new();
 
+    // Arraste de janela do PC em andamento (veja CheckWindowPush).
+    private IntPtr _moving;
+    private RECT _movingStart;
+    private bool _movingArmed;
+    private int _movingPush;
+    private bool _dragHeld;
+
+    /// <summary>O cursor voltou do celular arrastando algo: "app" ou "pc_window". Na thread da interface.</summary>
+    public event Action<string>? DraggedOut;
+
+    /// <summary>Uma janela foi arrastada e empurrada contra a borda do celular. Na thread da interface.</summary>
+    public event Action<IntPtr>? WindowPushed;
+
+    /// <summary>Liga/desliga o gesto de empurrar janelas para o celular.</summary>
+    public bool WindowDragEnabled { get; set; } = true;
+
+    /// <summary>Depois de <see cref="DraggedOut"/>: o usuário ainda está segurando o botão esquerdo?</summary>
+    public bool DragHeld
+    {
+        get { lock (_lock) return _dragHeld; }
+    }
+
     /// <summary>Precisa ser criado na thread da interface (por causa da janela que esconde o cursor).</summary>
     public CursorBridge(DeviceSession session, Action<string> log)
     {
@@ -51,7 +89,7 @@ public sealed class CursorBridge : IDisposable
         _shield = new CursorShield();
         _queue = new InputQueue(session, OnSendFailed);
         _session.PointerLeft += OnPointerLeft;
-        _input = new LowLevelInput(OnMouse, OnKeyboard, OnRawMove);
+        _input = new LowLevelInput(OnMouse, OnKeyboard, OnRawMove, OnMoveSize);
     }
 
     public bool OnPhone
@@ -65,6 +103,8 @@ public sealed class CursorBridge : IDisposable
         {
             if (!_onPhone)
             {
+                if (message == WM_LBUTTONUP && (data.flags & LLMHF_INJECTED) == 0)
+                    _dragHeld = false;
                 if (message == WM_MOUSEMOVE && ShouldEnter(data.pt))
                 {
                     Enter(data.pt);
@@ -111,7 +151,75 @@ public sealed class CursorBridge : IDisposable
             _lastRawMove = DateTime.UtcNow;
             if (_onPhone)
                 _queue.Move(dx, dy);
+            else if (_moving != 0)
+                CheckWindowPush(dx);
         }
+    }
+
+    private void OnMoveSize(IntPtr hwnd, bool start)
+    {
+        lock (_lock)
+        {
+            if (!start)
+            {
+                if (hwnd == _moving)
+                    _moving = 0;
+                return;
+            }
+            if (!WindowDragEnabled || _onPhone || !GetWindowRect(hwnd, out _movingStart))
+                return;
+            _moving = hwnd;
+            _movingPush = 0;
+            // Começou perto da borda (ex.: a janela de um app que acabou de sair do celular): só vale
+            // depois de se afastar, senão a janela voltaria na hora.
+            GetCursorPos(out var pt);
+            _movingArmed = PhoneEdgeX(pt) is not { } edge || pt.X > edge + 100;
+        }
+    }
+
+    /// <summary>
+    /// Arrastando uma janela: se o cursor está na borda do celular e o usuário continua empurrando,
+    /// cancela o arraste (Esc, a janela volta para onde estava) e avisa <see cref="WindowPushed"/>.
+    /// </summary>
+    private void CheckWindowPush(int dx)
+    {
+        GetCursorPos(out var pt);
+        if (PhoneEdgeX(pt) is not { } edge)
+        {
+            _movingPush = 0;
+            return;
+        }
+        if (!_movingArmed)
+        {
+            _movingArmed = pt.X > edge + 100;
+            return;
+        }
+        if (pt.X > edge || dx > 0)
+        {
+            _movingPush = 0;
+            return;
+        }
+        _movingPush -= dx;
+        if (_movingPush < WindowPushThreshold)
+            return;
+
+        var hwnd = _moving;
+        _moving = 0;
+        if (!GetWindowRect(hwnd, out var rect) || rect.Width != _movingStart.Width || rect.Height != _movingStart.Height)
+            return; // estava redimensionando, não arrastando
+        InjectKeyPress(VK_ESCAPE);
+        _ui.BeginInvoke(() => WindowPushed?.Invoke(hwnd));
+    }
+
+    /// <summary>
+    /// A borda esquerda do monitor de <paramref name="pt"/>, se for a borda do celular (não há outro
+    /// monitor à esquerda dela); senão null.
+    /// </summary>
+    private static int? PhoneEdgeX(POINT pt)
+    {
+        var monitor = MonitorRect(MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST));
+        var y = Math.Clamp(pt.Y, monitor.Top, monitor.Bottom - 1);
+        return MonitorFromPoint(new POINT(monitor.Left - 1, y), MONITOR_DEFAULTTONULL) == 0 ? monitor.Left : null;
     }
 
     private bool OnKeyboard(in KBDLLHOOKSTRUCT data)
@@ -147,12 +255,9 @@ public sealed class CursorBridge : IDisposable
     {
         if (DateTime.UtcNow - _lastReturn < Cooldown)
             return false;
-        var monitor = MonitorRect(MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST));
-        if (pt.X > monitor.Left)
+        // Se tem outro monitor à esquerda, o cursor só passa para ele.
+        if (PhoneEdgeX(pt) is not { } edge || pt.X > edge)
             return false;
-        var y = Math.Clamp(pt.Y, monitor.Top, monitor.Bottom - 1);
-        if (MonitorFromPoint(new POINT(monitor.Left - 1, y), MONITOR_DEFAULTTONULL) != 0)
-            return false; // tem outro monitor à esquerda: o cursor só passa para ele
         // Arrastando uma janela ou selecionando texto: não troca.
         return !IsDown(VK_LBUTTON) && !IsDown(VK_RBUTTON) && !IsDown(VK_MBUTTON);
     }
@@ -177,8 +282,9 @@ public sealed class CursorBridge : IDisposable
     /// <summary>
     /// Traz o cursor de volta ao monitor. <paramref name="position"/> é a altura (0 a 1) em que ele
     /// saiu do celular; null quando foi o PC que pediu (atalho, erro ou desconexão).
+    /// <paramref name="drag"/>: o que o usuário trouxe arrastando do celular, se trouxe.
     /// </summary>
-    private void ReturnToPc(double? position)
+    private void ReturnToPc(double? position, string? drag = null)
     {
         lock (_lock)
         {
@@ -197,13 +303,18 @@ public sealed class CursorBridge : IDisposable
             _buttons = 0;
 
             var y = position is { } p ? _monitor.Top + (int)Math.Round(p * (_monitor.Height - 1)) : _park.Y;
-            var x = position is null ? _park.X : _monitor.Left + 2;
+            var x = position is null ? _park.X : _monitor.Left + (drag is null ? 2 : DragReturnOffset);
             SetCursorPos(x, y);
             _ui.BeginInvoke(() => { if (!OnPhone) _shield.Hide(); });
+            if (drag is not null)
+            {
+                _dragHeld = true;
+                _ui.BeginInvoke(() => DraggedOut?.Invoke(drag));
+            }
         }
     }
 
-    private void OnPointerLeft(double position) => ReturnToPc(position);
+    private void OnPointerLeft(double position, string? drag) => ReturnToPc(position, drag);
 
     private void OnSendFailed(Exception e)
     {

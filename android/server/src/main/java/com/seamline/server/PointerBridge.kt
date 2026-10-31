@@ -11,10 +11,13 @@ import android.os.SystemClock
  * Quando a setinha encosta na borda combinada e o usuário continua empurrando, avisamos o PC
  * (pointer_leave) para o cursor voltar para o monitor.
  *
+ * Se o botão esquerdo estiver apertado nessa hora (o usuário está "arrastando" a tela para fora),
+ * o aviso vai com dragging = true: o PC leva junto o que está na frente (Fase 4).
+ *
  * O teclado só existe enquanto o PC pede (keyboard attached): com um teclado físico conectado o
  * Android esconde o teclado da tela, e isso atrapalharia quem pega o celular na mão.
  */
-class PointerBridge(private val onLeave: (position: Float) -> Unit) : AutoCloseable {
+class PointerBridge(private val onLeave: (position: Float, dragging: Boolean) -> Unit) : AutoCloseable {
     enum class Edge { LEFT, RIGHT, TOP, BOTTOM }
 
     private val mouse = UhidDevice.create("Seamline Mouse", Hid.MOUSE_DESCRIPTOR)
@@ -113,7 +116,8 @@ class PointerBridge(private val onLeave: (position: Float) -> Unit) : AutoClosea
             Edge.TOP -> -dy
             Edge.BOTTOM -> dy
         }
-        if (toward <= 0 || buttons != 0) {
+        // Só o botão esquerdo apertado = arrastando; com outros botões o cursor não sai.
+        if (toward <= 0 || (buttons != 0 && buttons != 1)) {
             push = 0
             return
         }
@@ -134,13 +138,14 @@ class PointerBridge(private val onLeave: (position: Float) -> Unit) : AutoClosea
             push = 0
             return
         }
-        if (push < LEAVE_PUSH) return
+        val dragging = buttons == 1
+        if (push < (if (dragging) DRAG_LEAVE_PUSH else LEAVE_PUSH)) return
         val position = when (edge) {
             Edge.LEFT, Edge.RIGHT -> p.y / (screen.height - 1)
             Edge.TOP, Edge.BOTTOM -> p.x / (screen.width - 1)
         }
         exit()
-        onLeave(position.coerceIn(0f, 1f))
+        onLeave(position.coerceIn(0f, 1f), dragging)
     }
 
     private fun move(dx: Int, dy: Int) = mouse.send(Hid.mouseReport(buttons, dx, dy, 0, 0))
@@ -155,5 +160,8 @@ class PointerBridge(private val onLeave: (position: Float) -> Unit) : AutoClosea
 
         /** Quanto (em unidades do mouse) é preciso empurrar contra a borda para voltar ao PC. */
         const val LEAVE_PUSH = 20
+
+        /** Arrastando, pede um empurrão maior: não queremos levar o app por acidente ao rolar algo. */
+        const val DRAG_LEAVE_PUSH = 60
     }
 }

@@ -26,6 +26,22 @@ internal static class Native
 
     public const int LLKHF_EXTENDED = 0x01;
     public const int LLKHF_UP = 0x80;
+    public const int LLMHF_INJECTED = 0x01;
+
+    public const uint EVENT_SYSTEM_MOVESIZESTART = 0x000A;
+    public const uint EVENT_SYSTEM_MOVESIZEEND = 0x000B;
+    public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
+    public const int OBJID_WINDOW = 0;
+
+    public const uint INPUT_MOUSE = 0;
+    public const uint INPUT_KEYBOARD = 1;
+    public const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+    public const uint MOUSEEVENTF_LEFTUP = 0x0004;
+    public const uint KEYEVENTF_KEYUP = 0x0002;
+    public const ushort VK_ESCAPE = 0x1B;
+
+    /// <summary>Marca os eventos que o próprio Seamline injeta, para os ganchos reconhecerem.</summary>
+    public static readonly IntPtr SeamlineInputTag = new(0x5EA1);
 
     public const int VK_LBUTTON = 0x01;
     public const int VK_RBUTTON = 0x02;
@@ -42,6 +58,9 @@ internal static class Native
     public const int GWL_EXSTYLE = -20;
     public const int WS_EX_TOOLWINDOW = 0x00000080;
     public const int WS_EX_NOACTIVATE = 0x08000000;
+    public const uint SWP_NOSIZE = 0x0001;
+    public const uint SWP_NOMOVE = 0x0002;
+    public const uint SWP_NOZORDER = 0x0004;
     public const uint SWP_NOACTIVATE = 0x0010;
     public static readonly IntPtr HWND_TOPMOST = new(-1);
     public static readonly IntPtr HWND_MESSAGE = new(-3);
@@ -151,7 +170,44 @@ internal static class Native
         public IntPtr hIconSm;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MOUSEINPUT
+    {
+        public int dx;
+        public int dy;
+        public uint mouseData;
+        public uint dwFlags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KEYBDINPUT
+    {
+        public ushort wVk;
+        public ushort wScan;
+        public uint dwFlags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct INPUTUNION
+    {
+        [FieldOffset(0)] public MOUSEINPUT mi;
+        [FieldOffset(0)] public KEYBDINPUT ki;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct INPUT
+    {
+        public uint type;
+        public INPUTUNION u;
+    }
+
     public delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
+    public delegate void WinEventProc(IntPtr hook, uint eventType, IntPtr hwnd, int idObject, int idChild,
+        uint eventThread, uint eventTime);
     public delegate IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -223,6 +279,42 @@ internal static class Native
 
     [DllImport("user32.dll")]
     public static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
+    [DllImport("user32.dll")]
+    public static extern bool GetCursorPos(out POINT lpPoint);
+
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc,
+        WinEventProc lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    public static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+
+    /// <summary>Aperta (ou solta) o botão esquerdo do mouse onde o cursor está.</summary>
+    public static void InjectLeftButton(bool down) => Send(new INPUT
+    {
+        type = INPUT_MOUSE,
+        u = new INPUTUNION { mi = new MOUSEINPUT { dwFlags = down ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP, dwExtraInfo = SeamlineInputTag } },
+    });
+
+    /// <summary>Aperta e solta uma tecla (ex.: Esc para cancelar o arraste de uma janela).</summary>
+    public static void InjectKeyPress(ushort virtualKey)
+    {
+        INPUT Key(uint flags) => new()
+        {
+            type = INPUT_KEYBOARD,
+            u = new INPUTUNION { ki = new KEYBDINPUT { wVk = virtualKey, dwFlags = flags, dwExtraInfo = SeamlineInputTag } },
+        };
+        Send(Key(0), Key(KEYEVENTF_KEYUP));
+    }
+
+    private static void Send(params INPUT[] inputs) => SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
 
     public static bool IsDown(int virtualKey) => (GetAsyncKeyState(virtualKey) & 0x8000) != 0;
 

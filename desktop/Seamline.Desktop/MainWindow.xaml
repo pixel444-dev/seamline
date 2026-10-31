@@ -6,16 +6,25 @@
         <StackPanel DockPanel.Dock="Top">
             <TextBlock Text="Celulares encontrados pelo adb" FontWeight="SemiBold" />
             <DockPanel Margin="0,6,0,0">
+                <Button x:Name="PairButton" DockPanel.Dock="Right" Content="Parear pelo Wi-Fi..." Padding="12,4" Margin="6,0,0,0" Click="PairButton_Click" />
                 <Button x:Name="RefreshButton" DockPanel.Dock="Right" Content="Atualizar" Padding="12,4" Margin="6,0,0,0" Click="RefreshButton_Click" />
                 <ComboBox x:Name="DeviceList" />
             </DockPanel>
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                 <Button x:Name="ConnectButton" Content="Conectar" Padding="12,4" Click="ConnectButton_Click" />
                 <Button x:Name="PingButton" Content="Testar (ping)" Padding="12,4" Margin="6,0,0,0" IsEnabled="False" Click="PingButton_Click" />
+                <Button x:Name="BringAppButton" Content="Trazer o app aberto no celular" Padding="12,4" Margin="6,0,0,0" IsEnabled="False" Click="BringAppButton_Click" />
             </StackPanel>
             <CheckBox x:Name="BridgeCheck" Margin="0,8,0,0" IsChecked="True"
                       Checked="BridgeCheck_Changed" Unchecked="BridgeCheck_Changed"
                       Content="Mouse e teclado vão para o celular pela borda esquerda do monitor (voltar: empurre pela borda direita do celular ou Ctrl+Alt+Esc)" />
+            <TextBlock Margin="20,4,0,0" TextWrapping="Wrap" Foreground="#555"
+                       Text="Arrastar: no celular, segure o botão esquerdo e empurre para fora pela borda: o app (ou a janela do PC que estava lá) vem junto. No PC, arraste qualquer janela e empurre contra a borda esquerda: ela vai para o celular (um toque leve na borda continua encaixando a janela, como sempre)." />
+            <DockPanel Margin="0,8,0,0">
+                <Button x:Name="SendWindowButton" DockPanel.Dock="Right" Content="Mandar para o celular" Padding="12,4" Margin="6,0,0,0" IsEnabled="False" Click="SendWindowButton_Click" />
+                <TextBlock DockPanel.Dock="Left" Text="Janela do PC:" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <ComboBox x:Name="WindowList" DropDownOpened="WindowList_DropDownOpened" />
+            </DockPanel>
             <TextBlock x:Name="StatusText" Margin="0,8,0,0" Text="Desconectado." />
             <TextBlock Text="Registro" FontWeight="SemiBold" Margin="0,12,0,4" />
         </StackPanel>

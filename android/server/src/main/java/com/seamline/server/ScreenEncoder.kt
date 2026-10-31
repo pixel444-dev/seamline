@@ -9,37 +9,90 @@ import java.io.DataOutputStream
 import java.io.OutputStream
 
 /**
- * Captura a tela principal e manda em H.264 para o PC.
+ * Codifica uma tela em H.264 e manda para o PC.
  *
  * Formato do fluxo (veja docs/protocolo.md):
  *   cabeçalho: largura (int32) + altura (int32)
- *   cada pacote: pts em µs (int64, bit 63 = configuração, bit 62 = quadro-chave) + tamanho (int32) + dados
+ *   cada pacote: pts em µs (int64, bit 63 = configuração, bit 62 = quadro-chave, bit 61 = novo
+ *   tamanho) + tamanho (int32) + dados
+ *
+ * A tela de onde vem a imagem é um [Source]: o espelho da tela do celular ou a tela virtual de um
+ * app enviado ao PC. Quando o tamanho muda, [restart] recria o codificador e manda um pacote de
+ * "novo tamanho" no meio do fluxo.
  */
 class ScreenEncoder(
-    private val maxSize: Int,
+    private val source: Source,
     private val bitRate: Int = 8_000_000,
     private val maxFps: Int = 60,
 ) {
-    fun stream(output: OutputStream) {
-        val screen = Displays.info()
-        val (codec, width, height) = createCodec(screen)
-        val surface = codec.createInputSurface()
-        var display: VirtualDisplay? = null
-        try {
-            display = Displays.createMirror("seamline", width, height, 0, surface) as VirtualDisplay
-            codec.start()
-            println("Vídeo: tela ${screen.width}x${screen.height} → ${width}x$height")
+    interface Source {
+        /** Tamanhos para tentar, do preferido ao menor (o codificador do celular pode recusar alguns). */
+        fun sizes(): List<Pair<Int, Int>>
 
-            val out = DataOutputStream(output.buffered(1 shl 16))
-            out.writeInt(width)
-            out.writeInt(height)
-            out.flush()
-            encodeLoop(codec, out)
-        } finally {
-            display?.release()
-            codec.stop()
-            codec.release()
-            surface.release()
+        /** Passa a desenhar na [surface] (a entrada do codificador), que tem esse tamanho. */
+        fun attach(surface: Surface, width: Int, height: Int)
+
+        /** Para de desenhar na surface atual (o codificador vai ser recriado ou encerrado). */
+        fun detach()
+    }
+
+    private val lock = Any()
+    private var codec: MediaCodec? = null
+    private var restartPending = false
+    @Volatile private var stopped = false
+
+    /** Recria o codificador com o tamanho atual do [source] (ex.: a janela do PC mudou de tamanho). */
+    fun restart() = synchronized(lock) {
+        val current = codec
+        if (current == null) {
+            restartPending = true // está sendo criado: o pedido vale para o próximo
+            return@synchronized
+        }
+        try {
+            current.signalEndOfInputStream()
+        } catch (_: IllegalStateException) {
+            // Já estava encerrando.
+        }
+    }
+
+    fun stop() {
+        stopped = true
+        restart()
+    }
+
+    fun stream(output: OutputStream) {
+        val out = DataOutputStream(output.buffered(1 shl 16))
+        var first = true
+        while (!stopped) {
+            val (codec, width, height) = createCodec()
+            val surface = codec.createInputSurface()
+            try {
+                source.attach(surface, width, height)
+                codec.start()
+                if (first) {
+                    out.writeInt(width)
+                    out.writeInt(height)
+                } else {
+                    out.writeLong(FLAG_SIZE)
+                    out.writeInt(8)
+                    out.writeInt(width)
+                    out.writeInt(height)
+                }
+                out.flush()
+                first = false
+                synchronized(lock) {
+                    this.codec = codec
+                    if (restartPending || stopped) codec.signalEndOfInputStream()
+                    restartPending = false
+                }
+                encodeLoop(codec, out)
+            } finally {
+                synchronized(lock) { this.codec = null }
+                source.detach()
+                codec.stop()
+                codec.release()
+                surface.release()
+            }
         }
     }
 
@@ -67,12 +120,10 @@ class ScreenEncoder(
         }
     }
 
-    /** Tenta tamanhos cada vez menores até o codificador do celular aceitar. */
-    private fun createCodec(screen: Displays.Info): Triple<MediaCodec, Int, Int> {
-        val sizes = listOf(maxSize, 1600, 1280, 1024, 800).filter { it <= maxSize }.distinct()
+    /** Tenta os tamanhos do [source], do maior para o menor, até o codificador do celular aceitar. */
+    private fun createCodec(): Triple<MediaCodec, Int, Int> {
         var lastError: Exception? = null
-        for (size in sizes) {
-            val (width, height) = fit(screen.width, screen.height, size)
+        for ((width, height) in source.sizes()) {
             val codec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
             try {
                 codec.configure(format(width, height), null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
@@ -97,9 +148,10 @@ class ScreenEncoder(
             setFloat(MediaFormat.KEY_MAX_FPS_TO_ENCODER, maxFps.toFloat())
         }
 
-    private companion object {
-        const val FLAG_CONFIG = 1L shl 63
-        const val FLAG_KEY_FRAME = 1L shl 62
+    companion object {
+        private const val FLAG_CONFIG = 1L shl 63
+        private const val FLAG_KEY_FRAME = 1L shl 62
+        private const val FLAG_SIZE = 1L shl 61
 
         /** Reduz para caber em [maxSize] mantendo a proporção; múltiplos de 16 evitam bordas no decodificador. */
         fun fit(width: Int, height: Int, maxSize: Int): Pair<Int, Int> {
@@ -107,5 +159,27 @@ class ScreenEncoder(
             fun align(v: Double) = maxOf(16, (v / 16).toInt() * 16)
             return align(width * scale) to align(height * scale)
         }
+    }
+}
+
+/** A tela inteira do celular, espelhada (Fase 1). */
+class MirrorSource(private val maxSize: Int) : ScreenEncoder.Source {
+    private var display: VirtualDisplay? = null
+
+    override fun sizes(): List<Pair<Int, Int>> {
+        val screen = Displays.info()
+        return listOf(maxSize, 1600, 1280, 1024, 800).filter { it <= maxSize }.distinct()
+            .map { ScreenEncoder.fit(screen.width, screen.height, it) }
+    }
+
+    override fun attach(surface: Surface, width: Int, height: Int) {
+        val screen = Displays.info()
+        display = Displays.createMirror("seamline", width, height, 0, surface) as VirtualDisplay
+        println("Vídeo: tela ${screen.width}x${screen.height} → ${width}x$height")
+    }
+
+    override fun detach() {
+        display?.release()
+        display = null
     }
 }

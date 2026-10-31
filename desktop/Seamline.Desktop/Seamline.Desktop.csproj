@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- A versão do Windows no nome libera as APIs do Windows 10+ (captura de janelas, Fase 5). -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -19,8 +20,19 @@
   <ItemGroup Condition="Exists('$(ServerApk)')">
     <None Include="$(ServerApk)" Link="seamline-server.apk" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- O app Android também: o PC instala/atualiza no celular quando precisa mostrar uma janela lá. -->
+  <PropertyGroup>
+    <AppApk>..\..\android\app\build\outputs\apk\debug\app-debug.apk</AppApk>
+  </PropertyGroup>
+  <ItemGroup Condition="Exists('$(AppApk)')">
+    <None Include="$(AppApk)" Link="seamline-app.apk" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Vortice.MediaFoundation" Version="3.8.3" />
+    <!-- Direct3D 11: recebe as imagens da captura de janelas (Fase 5). -->
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <!-- Gera o QR code do pareamento pela Depuração sem fio. -->
+    <PackageReference Include="QRCoder" Version="1.6.0" />
   </ItemGroup>
 
 </Project>

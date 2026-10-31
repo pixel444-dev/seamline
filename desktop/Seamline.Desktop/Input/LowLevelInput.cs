@@ -10,6 +10,7 @@ namespace Seamline.Desktop.Input;
 ///
 /// - Ganchos globais (WH_MOUSE_LL e WH_KEYBOARD_LL): avisam cada evento e permitem bloqueá-lo.
 /// - Raw Input: o movimento "cru" do mouse, sem a aceleração do Windows e sem parar na borda da tela.
+/// - WinEvents: avisam quando o usuário começa e termina de arrastar (ou redimensionar) uma janela.
 ///
 /// Tudo roda numa thread própria com fila de mensagens. Se rodasse na thread da interface, qualquer
 /// travadinha da janela deixaria o mouse do PC inteiro lento (o Windows espera o gancho responder).
@@ -26,24 +27,30 @@ internal sealed class LowLevelInput : IDisposable
     private readonly MouseHandler _onMouse;
     private readonly KeyboardHandler _onKeyboard;
     private readonly Action<int, int> _onRawMove;
+    private readonly Action<IntPtr, bool> _onMoveSize;
 
     // Os delegates precisam continuar vivos enquanto o Windows guarda o ponteiro para eles.
     private readonly HookProc _mouseProc;
     private readonly HookProc _keyboardProc;
     private readonly WndProc _wndProc;
+    private readonly WinEventProc _winEventProc;
 
     private readonly Thread _thread;
     private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private uint _threadId;
 
-    public LowLevelInput(MouseHandler onMouse, KeyboardHandler onKeyboard, Action<int, int> onRawMove)
+    /// <param name="onMoveSize">Janela que começou (true) ou terminou (false) de ser arrastada/redimensionada.</param>
+    public LowLevelInput(MouseHandler onMouse, KeyboardHandler onKeyboard, Action<int, int> onRawMove,
+        Action<IntPtr, bool> onMoveSize)
     {
         _onMouse = onMouse;
         _onKeyboard = onKeyboard;
         _onRawMove = onRawMove;
+        _onMoveSize = onMoveSize;
         _mouseProc = MouseProc;
         _keyboardProc = KeyboardProc;
         _wndProc = WindowProc;
+        _winEventProc = WinEventCallback;
         _thread = new Thread(Run) { IsBackground = true, Name = "Ganchos de mouse e teclado" };
         _thread.Start();
         _started.Task.GetAwaiter().GetResult(); // repassa o erro se não conseguiu instalar os ganchos
@@ -51,7 +58,7 @@ internal sealed class LowLevelInput : IDisposable
 
     private void Run()
     {
-        IntPtr mouseHook = 0, keyboardHook = 0, window = 0;
+        IntPtr mouseHook = 0, keyboardHook = 0, window = 0, winEventHook = 0;
         try
         {
             _threadId = GetCurrentThreadId();
@@ -61,6 +68,8 @@ internal sealed class LowLevelInput : IDisposable
             if (mouseHook == 0 || keyboardHook == 0)
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "Não consegui instalar os ganchos de mouse/teclado.");
             window = CreateRawInputWindow(module);
+            winEventHook = SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND, 0, _winEventProc, 0, 0,
+                WINEVENT_OUTOFCONTEXT);
             _started.SetResult();
         }
         catch (Exception e)
@@ -82,6 +91,7 @@ internal sealed class LowLevelInput : IDisposable
             if (mouseHook != 0) UnhookWindowsHookEx(mouseHook);
             if (keyboardHook != 0) UnhookWindowsHookEx(keyboardHook);
             if (window != 0) DestroyWindow(window);
+            if (winEventHook != 0) UnhookWinEvent(winEventHook);
         }
     }
 
@@ -143,6 +153,12 @@ internal sealed class LowLevelInput : IDisposable
             }
         }
         return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+
+    private void WinEventCallback(IntPtr hook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
+    {
+        if (idObject == OBJID_WINDOW && hwnd != 0)
+            Guard(() => { _onMoveSize(hwnd, eventType == EVENT_SYSTEM_MOVESIZESTART); return false; });
     }
 
     /// <summary>Um erro aqui dentro não pode derrubar o app nem deixar o mouse travado.</summary>

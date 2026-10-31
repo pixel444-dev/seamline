@@ -7,7 +7,11 @@ public sealed record AdbDevice(string Serial, string State, string Model)
 {
     public bool IsReady => State == "device";
 
-    public override string ToString() => IsReady ? $"{Model}  ({Serial})" : $"{Serial}  [{State}]";
+    /// <summary>Conectado pela Depuração sem fio ("adb-XXX._adb-tls-connect._tcp" ou "IP:porta").</summary>
+    public bool IsWireless => Serial.Contains("._adb-tls-connect") || Serial.Contains(':');
+
+    public override string ToString() =>
+        IsReady ? (IsWireless ? $"{Model}  (Wi-Fi)" : $"{Model}  (USB, {Serial})") : $"{Serial}  [{State}]";
 }
 
 /// <summary>
@@ -37,7 +41,16 @@ public sealed class AdbClient(string adbPath)
             ?? throw new InvalidOperationException("Não foi possível iniciar o adb.");
         var stdout = process.StandardOutput.ReadToEndAsync(ct);
         var stderr = process.StandardError.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
+        try
+        {
+            await process.WaitForExitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // Sem isso, um "adb pair" ou "adb connect" travado continuaria rodando escondido.
+            try { process.Kill(); } catch (InvalidOperationException) { }
+            throw;
+        }
         var output = (await stdout) + (await stderr);
         if (process.ExitCode != 0)
             throw new AdbException($"adb {string.Join(' ', args)} falhou: {output.Trim()}");

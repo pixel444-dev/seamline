@@ -1,0 +1,13 @@
+<Window x:Class="Seamline.Desktop.AppWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Seamline" Background="Black" SizeToContent="WidthAndHeight"
+        UseLayoutRounding="True" MinWidth="200" MinHeight="200">
+    <!-- Um app do celular numa janela própria (Fase 3). Clique = toque, direito = Voltar. -->
+    <Grid x:Name="Area">
+        <Image x:Name="Screen" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+        <TextBlock x:Name="StatusText" Text="Trazendo o app do celular..." Foreground="#DDD"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                   TextWrapping="Wrap" Margin="24" />
+    </Grid>
+</Window>

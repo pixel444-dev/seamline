@@ -6,6 +6,7 @@ import android.os.Looper
 import android.view.KeyEvent
 import android.view.MotionEvent
 import org.json.JSONObject
+import java.io.IOException
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
@@ -17,7 +18,7 @@ import kotlin.system.exitProcess
  * criar telas virtuais e injetar toques.
  */
 object Server {
-    const val PROTOCOL_VERSION = 3
+    const val PROTOCOL_VERSION = 4
     private const val SOCKET_NAME = "seamline"
     private const val DEFAULT_MAX_SIZE = 1600
 
@@ -35,29 +36,56 @@ object Server {
 
         println("Seamline server ${BuildConfig.VERSION_NAME} aguardando o PC...")
         // O PC chega aqui pelo túnel "adb forward tcp:<porta> localabstract:seamline".
-        // Primeira conexão: controle (mensagens JSON). Segunda: vídeo.
-        val (control, video) = LocalServerSocket(SOCKET_NAME).use { server ->
-            val control = server.accept()
-            MessageChannel(control.inputStream, control.outputStream).send(hello())
-            control to server.accept()
-        }
+        // Primeira conexão: controle (mensagens JSON). Segunda: vídeo da tela do celular.
+        // As seguintes: vídeo das janelas de apps (cada uma começa com o id da janela).
+        val server = LocalServerSocket(SOCKET_NAME)
+        val control = server.accept()
+        val channel = MessageChannel(control.inputStream, control.outputStream)
+        channel.send(hello())
+        val video = server.accept()
         println("PC conectado.")
 
         thread(name = "video", isDaemon = true) {
             try {
-                ScreenEncoder(maxSize).stream(video.outputStream)
+                ScreenEncoder(MirrorSource(maxSize)).stream(video.outputStream)
             } catch (e: Exception) {
                 println("Erro no vídeo: $e")
                 exitProcess(2)
             }
         }
 
-        control.use {
-            val channel = MessageChannel(it.inputStream, it.outputStream)
-            val bridge = PointerBridge { position ->
-                channel.send(JSONObject().put("type", "pointer_leave").put("position", position.toDouble()))
+        val send = { message: JSONObject ->
+            try {
+                channel.send(message)
+            } catch (_: IOException) {
+                // O PC desconectou; o loop de mensagens percebe e encerra.
             }
-            bridge.use { serve(channel, InputInjector(), bridge) }
+        }
+        val apps = AppWindows(send)
+        thread(name = "accept", isDaemon = true) {
+            while (true) {
+                val socket = try {
+                    server.accept()
+                } catch (_: IOException) {
+                    break
+                }
+                thread(name = "app-video", isDaemon = true) {
+                    try {
+                        apps.attach(socket)
+                    } catch (e: Exception) {
+                        println("Erro na conexão de vídeo de uma janela: $e")
+                    }
+                }
+            }
+        }
+
+        control.use {
+            val bridge = PointerBridge { position, dragging ->
+                val message = JSONObject().put("type", "pointer_leave").put("position", position.toDouble())
+                if (dragging) dragKind()?.let { message.put("drag", it) }
+                send(message)
+            }
+            bridge.use { apps.use { serve(channel, InputInjector(), bridge, apps) } }
         }
         println("PC desconectou.")
         // app_process pode deixar threads do sistema vivas; saímos explicitamente.
@@ -77,11 +105,26 @@ object Server {
             .put("screenHeight", screen.height)
     }
 
-    private fun serve(channel: MessageChannel, input: InputInjector, bridge: PointerBridge) {
+    /**
+     * O usuário arrastou a tela do celular para fora pela borda: o que vai junto para o PC?
+     * "app" = o app da frente; "pc_window" = uma janela do PC que estava no celular (Fase 5).
+     */
+    private fun dragKind(): String? {
+        val top = try {
+            Tasks.topApp(0)
+        } catch (e: Exception) {
+            println("Não consegui ver o app da frente: ${e.cause ?: e}")
+            null
+        } ?: return null
+        val isPcWindow = top.packageName == "com.seamline.app" && top.className?.endsWith(".RemoteWindowActivity") == true
+        return if (isPcWindow) "pc_window" else "app"
+    }
+
+    private fun serve(channel: MessageChannel, input: InputInjector, bridge: PointerBridge, apps: AppWindows) {
         while (true) {
             val message = channel.receive() ?: return
             try {
-                if (!handle(message, channel, input, bridge)) return
+                if (!handle(message, channel, input, bridge, apps)) return
             } catch (e: Exception) {
                 // Uma mensagem com problema não deve derrubar a conexão inteira.
                 println("Erro ao processar ${message.optString("type")}: $e")
@@ -90,18 +133,29 @@ object Server {
     }
 
     /** Retorna false quando o PC pediu para encerrar. */
-    private fun handle(message: JSONObject, channel: MessageChannel, input: InputInjector, bridge: PointerBridge): Boolean {
+    private fun handle(
+        message: JSONObject, channel: MessageChannel, input: InputInjector, bridge: PointerBridge, apps: AppWindows,
+    ): Boolean {
+        // Toques, rolagem e teclas com "window" vão para a janela de app com esse id.
+        val window = if (message.has("window")) message.getInt("window") else null
+        val target = window?.let { apps.target(it) ?: return true } // janela fechando: ignora
+        if (target != null && !Power.isAwake()) Power.wakeUp() // a tela da janela dorme com o celular
         when (val type = message.optString("type")) {
             "ping" -> channel.send(JSONObject().put("type", "pong"))
             "touch" -> touchAction(message.optString("action"))?.let {
-                input.touch(it, message.getDouble("x").toFloat(), message.getDouble("y").toFloat())
+                input.touch(it, message.getDouble("x").toFloat(), message.getDouble("y").toFloat(), target)
             }
             "scroll" -> input.scroll(
                 message.getDouble("x").toFloat(), message.getDouble("y").toFloat(),
-                message.optDouble("dx", 0.0).toFloat(), message.optDouble("dy", 0.0).toFloat(),
+                message.optDouble("dx", 0.0).toFloat(), message.optDouble("dy", 0.0).toFloat(), target,
             )
-            "key" -> keyCode(message.optString("key"))?.let(input::pressKey)
+            "key" -> keyCode(message.optString("key"))?.let { input.pressKey(it, target?.displayId ?: 0) }
                 ?: println("Tecla desconhecida: ${message.optString("key")}")
+            "app_open" -> apps.open(
+                message.getInt("id"), message.getInt("width"), message.getInt("height"), message.getInt("dpi"),
+            )
+            "app_resize" -> apps.resize(message.getInt("id"), message.getInt("width"), message.getInt("height"))
+            "app_close" -> apps.close(message.getInt("id"))
             "pointer_enter" -> bridge.enter(
                 PointerBridge.Edge.valueOf(message.getString("edge").uppercase()),
                 message.getDouble("position").toFloat(),
