@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using Seamline.Desktop.Adb;
 using Seamline.Desktop.Input;
+using Seamline.Desktop.Metrics;
 using Seamline.Desktop.PcWindows;
 
 namespace Seamline.Desktop;
@@ -15,11 +16,19 @@ public partial class MainWindow : Window
     private readonly Dictionary<int, AppWindow> _apps = [];
     private PcWindowSession? _pcWindow;
     private bool _sendingWindow;
+    private GamerPanelWindow? _gamerPanel;
+    private PhonePanelSession? _phonePanel;
 
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += async (_, _) => await RefreshDevicesAsync();
+        Loaded += async (_, _) =>
+        {
+            // Reaberto como administrador pelo botão do painel: abre o painel de novo.
+            if (Environment.GetCommandLineArgs().Contains(Elevation.OpenPanelArgument))
+                OpenGamerPanel();
+            await RefreshDevicesAsync();
+        };
         Closing += async (_, _) => await DisconnectAsync();
     }
 
@@ -56,6 +65,7 @@ public partial class MainWindow : Window
             PingButton.IsEnabled = true;
             BringAppButton.IsEnabled = true;
             SendWindowButton.IsEnabled = true;
+            GamerPhoneButton.IsEnabled = true;
             _session.AppMessage += message => Dispatcher.BeginInvoke(() =>
             {
                 if ((int?)message["id"] is { } id && _apps.TryGetValue(id, out var app))
@@ -188,6 +198,51 @@ public partial class MainWindow : Window
         }
     }
 
+    private void GamerPanelButton_Click(object sender, RoutedEventArgs e) => OpenGamerPanel();
+
+    private void OpenGamerPanel()
+    {
+        if (_gamerPanel is not null)
+        {
+            _gamerPanel.Activate();
+            return;
+        }
+        _gamerPanel = new GamerPanelWindow { ShowOnPhone = ShowGamerPanelOnPhoneAsync };
+        _gamerPanel.Closed += (_, _) => _gamerPanel = null;
+        _gamerPanel.Show();
+    }
+
+    private async void GamerPhoneButton_Click(object sender, RoutedEventArgs e)
+    {
+        GamerPhoneButton.IsEnabled = false;
+        Log(await ShowGamerPanelOnPhoneAsync());
+        GamerPhoneButton.IsEnabled = _session is not null;
+    }
+
+    /// <summary>Abre o painel gamer na tela do celular. Retorna uma frase dizendo o que aconteceu.</summary>
+    private async Task<string> ShowGamerPanelOnPhoneAsync()
+    {
+        if (_session is null)
+            return "Conecte o celular na janela principal do Seamline primeiro.";
+        if (_phonePanel is not null)
+            return "O painel já está no celular.";
+        try
+        {
+            var panel = await PhonePanelSession.StartAsync(_session, Log);
+            _phonePanel = panel;
+            panel.Ended += () =>
+            {
+                if (_phonePanel == panel)
+                    _phonePanel = null;
+            };
+            return "Painel aberto no celular. Voltar no celular fecha o painel.";
+        }
+        catch (Exception ex)
+        {
+            return $"Não consegui abrir o painel no celular: {ex.Message}";
+        }
+    }
+
     private async void PingButton_Click(object sender, RoutedEventArgs e)
     {
         if (_session is null)
@@ -250,6 +305,8 @@ public partial class MainWindow : Window
             app.Close();
         _pcWindow?.End();
         _pcWindow = null;
+        _phonePanel?.End();
+        _phonePanel = null;
         var mirror = _mirror;
         _mirror = null;
         mirror?.Close();
@@ -260,6 +317,7 @@ public partial class MainWindow : Window
         PingButton.IsEnabled = false;
         BringAppButton.IsEnabled = false;
         SendWindowButton.IsEnabled = false;
+        GamerPhoneButton.IsEnabled = false;
         Log("Desconectado.");
     }
 

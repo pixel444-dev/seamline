@@ -266,6 +266,9 @@ internal static class WindowNative
     public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
     [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
     public static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO lpgui);
 
     [DllImport("user32.dll")]

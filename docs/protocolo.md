@@ -105,3 +105,22 @@ Não passa pelo server: o PC fala direto com o app Seamline (`com.seamline.app`)
 No PC, a janela fica no lugar, 100% transparente e atravessável pelo mouse (fora da tela o Windows para de
 redesenhá-la). Toques e teclas viram mensagens para a janela (`PostMessage`), sem mexer no cursor de verdade.
 Quando a conexão fecha (Voltar no celular, arraste para fora, janela fechada), a janela reaparece.
+
+## Painel gamer no celular
+
+Mesmo caminho da janela do PC no celular (instala/atualiza o app, `adb reverse`), mas abre
+`am start -n com.seamline.app/.GamerPanelActivity --ei port <porta>` e **não manda vídeo**: o PC manda
+uma mensagem JSON (4 bytes de tamanho na frente) por segundo e o celular desenha o painel.
+O celular não manda nada; quando ele fecha a conexão (Voltar), o PC encerra.
+
+`type: "metrics"` — números em `null` quando não estão disponíveis:
+
+| Campo | Significado |
+|---|---|
+| `cpu_name`, `cpu_usage` (%), `cpu_clock` (MHz), `cpu_temp` (°C) | Processador |
+| `cpu_temp_status` | `ok`, `admin` (abrir como administrador), `pawnio` (instalar o driver PawnIO) ou `none` |
+| `gpu_name`, `gpu_usage` (%), `gpu_temp` (°C), `gpu_fan` (rpm; 0 = parada), `gpu_power` (% do máximo) | Placa de vídeo |
+| `vram_used`, `vram_total`, `ram_used`, `ram_total` | Memórias, em MB |
+| `fps`, `frame_ms`, `fps_low` (1% low dos últimos 10 s), `game` | Jogo em primeiro plano |
+| `fps_status` | `ok`, `admin` ou `error` |
+| `admin` | O Seamline do PC está aberto como administrador |

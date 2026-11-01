@@ -293,7 +293,7 @@ public sealed class PcWindowSession
     /// Instala (ou atualiza) o app Seamline no celular quando o .apk que veio com o PC é diferente do
     /// instalado. Guardamos um "resumo" (hash) do .apk instalado no celular para comparar.
     /// </summary>
-    private static async Task EnsureAppInstalledAsync(AdbClient adb, string serial, Action<string> log)
+    internal static async Task EnsureAppInstalledAsync(AdbClient adb, string serial, Action<string> log)
     {
         var apk = Path.Combine(AppContext.BaseDirectory, "seamline-app.apk");
         if (!File.Exists(apk))

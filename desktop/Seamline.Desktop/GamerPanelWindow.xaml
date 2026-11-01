@@ -1,0 +1,287 @@
+﻿<Window x:Class="Seamline.Desktop.GamerPanelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:m="clr-namespace:Seamline.Desktop.Metrics"
+        Style="{StaticResource SeamlineWindow}"
+        Title="Seamline · Painel gamer" Height="620" Width="1080" MinHeight="540" MinWidth="900"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <!-- Visual "gamer": quase preto, neon e números grandes na fonte Bahnschrift (vem no Windows). -->
+        <FontFamily x:Key="NumberFont">Bahnschrift, Segoe UI</FontFamily>
+        <Color x:Key="FpsColor">#7CFF4F</Color>
+        <SolidColorBrush x:Key="FpsBrush" Color="{StaticResource FpsColor}" />
+        <SolidColorBrush x:Key="PanelCardBrush" Color="#0D0F17" />
+        <SolidColorBrush x:Key="PanelTileBrush" Color="#141826" />
+        <SolidColorBrush x:Key="PanelLabelBrush" Color="#7E869E" />
+
+        <Style x:Key="PanelCard" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource PanelCardBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="20,16" />
+            <Setter Property="BorderBrush">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#33FFFFFF" Offset="0" />
+                        <GradientStop Color="#0AFFFFFF" Offset="0.5" />
+                        <GradientStop Color="#1AFFFFFF" Offset="1" />
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- Rótulo pequeno em maiúsculas ("USO", "TEMPERATURA"...) -->
+        <Style x:Key="PanelLabel" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource NumberFont}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource PanelLabelBrush}" />
+        </Style>
+        <Style x:Key="PanelNumber" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource NumberFont}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="24" />
+        </Style>
+        <!-- Quadradinho com um número (temperatura, relógio, ventoinha) -->
+        <Style x:Key="PanelTile" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource PanelTileBrush}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+        <Style x:Key="PanelHint" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource PanelLabelBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <!-- Fundo: preto com um brilho azul e rosa bem fraco nos cantos -->
+        <Grid.Background>
+            <DrawingBrush Stretch="Fill">
+                <DrawingBrush.Drawing>
+                    <DrawingGroup>
+                        <GeometryDrawing Geometry="M0,0 H100 V100 H0 Z" Brush="#07080D" />
+                        <GeometryDrawing Geometry="M0,0 H100 V100 H0 Z">
+                            <GeometryDrawing.Brush>
+                                <RadialGradientBrush Center="0.05,0" GradientOrigin="0.05,0" RadiusX="0.6" RadiusY="0.8">
+                                    <GradientStop Color="#2200E5FF" Offset="0" />
+                                    <GradientStop Color="#0000E5FF" Offset="1" />
+                                </RadialGradientBrush>
+                            </GeometryDrawing.Brush>
+                        </GeometryDrawing>
+                        <GeometryDrawing Geometry="M0,0 H100 V100 H0 Z">
+                            <GeometryDrawing.Brush>
+                                <RadialGradientBrush Center="1,1" GradientOrigin="1,1" RadiusX="0.6" RadiusY="0.8">
+                                    <GradientStop Color="#22FF2E88" Offset="0" />
+                                    <GradientStop Color="#00FF2E88" Offset="1" />
+                                </RadialGradientBrush>
+                            </GeometryDrawing.Brush>
+                        </GeometryDrawing>
+                    </DrawingGroup>
+                </DrawingBrush.Drawing>
+            </DrawingBrush>
+        </Grid.Background>
+
+        <Grid Margin="22,18,22,22">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Cabeçalho -->
+            <DockPanel Margin="0,0,0,16">
+                <Border DockPanel.Dock="Left" Width="44" Height="44" CornerRadius="12">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#00E5FF" Offset="0" />
+                            <GradientStop Color="#FF2E88" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <TextBlock Text="&#xE7FC;" FontFamily="{StaticResource IconFont}" FontSize="22" Foreground="#07080D"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="AdminButton" Margin="0,0,8,0" Click="AdminButton_Click" Visibility="Collapsed"
+                            ToolTip="O Windows só mostra o FPS e a temperatura da CPU para programas abertos como administrador">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7EF;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock Text="Ativar FPS e temp. da CPU" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="PhoneButton" Style="{StaticResource PrimaryButton}" Click="PhoneButton_Click"
+                            ToolTip="Mostra este painel na tela do celular (bom para deixar ao lado do monitor enquanto joga)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8EA;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock Text="Mostrar no celular" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel Margin="14,0,16,0" VerticalAlignment="Center">
+                    <TextBlock Text="PAINEL GAMER" FontFamily="{StaticResource NumberFont}" FontSize="22" FontWeight="Bold" />
+                    <TextBlock x:Name="StatusLine" Text="Lendo os sensores..." Foreground="{StaticResource PanelLabelBrush}"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </DockPanel>
+
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.2*" />
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- FPS -->
+                <Border Style="{StaticResource PanelCard}">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top">
+                            <TextBlock Text="FPS" Style="{StaticResource PanelLabel}" FontSize="13" Foreground="{StaticResource FpsBrush}" />
+                            <TextBlock x:Name="GameText" Style="{StaticResource PanelLabel}" FontWeight="Normal" FontSize="12"
+                                       HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" Margin="12,0,0,0" />
+                        </DockPanel>
+                        <m:Sparkline x:Name="FpsChart" DockPanel.Dock="Bottom" Height="96" Margin="0,10,0,0" />
+                        <UniformGrid DockPanel.Dock="Bottom" Columns="2" Margin="0,8,0,0">
+                            <Border Style="{StaticResource PanelTile}" Margin="0,0,5,0">
+                                <StackPanel>
+                                    <TextBlock Text="TEMPO DO QUADRO" Style="{StaticResource PanelLabel}" />
+                                    <TextBlock x:Name="FrameTimeText" Text="--" Style="{StaticResource PanelNumber}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource PanelTile}" Margin="5,0,0,0"
+                                    ToolTip="FPS dos 1% quadros mais lentos dos últimos 10 s: mostra as travadinhas">
+                                <StackPanel>
+                                    <TextBlock Text="1% LOW" Style="{StaticResource PanelLabel}" />
+                                    <TextBlock x:Name="LowText" Text="--" Style="{StaticResource PanelNumber}" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                        <Grid>
+                            <TextBlock x:Name="FpsText" Text="--" FontFamily="{StaticResource NumberFont}" FontSize="110" FontWeight="Bold"
+                                       Foreground="{StaticResource FpsBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="{StaticResource FpsColor}" BlurRadius="28" ShadowDepth="0" Opacity="0.7" />
+                                </TextBlock.Effect>
+                            </TextBlock>
+                            <TextBlock x:Name="FpsHint" Style="{StaticResource PanelHint}" FontSize="12" TextAlignment="Center"
+                                       VerticalAlignment="Bottom" HorizontalAlignment="Center" MaxWidth="320" />
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <!-- CPU -->
+                <Border Grid.Column="2" Style="{StaticResource PanelCard}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top">
+                            <TextBlock Text="CPU" Style="{StaticResource PanelLabel}" FontSize="13" Foreground="#00E5FF" />
+                            <TextBlock x:Name="CpuNameText" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <UniformGrid DockPanel.Dock="Bottom" Columns="2">
+                            <Border Style="{StaticResource PanelTile}" Margin="0,0,5,0">
+                                <StackPanel>
+                                    <TextBlock Text="TEMPERATURA" Style="{StaticResource PanelLabel}" />
+                                    <TextBlock x:Name="CpuTempText" Text="--" Style="{StaticResource PanelNumber}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource PanelTile}" Margin="5,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="RELÓGIO" Style="{StaticResource PanelLabel}" />
+                                    <TextBlock x:Name="CpuClockText" Text="--" Style="{StaticResource PanelNumber}" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                        <TextBlock x:Name="CpuTempHint" DockPanel.Dock="Bottom" Style="{StaticResource PanelHint}" Margin="0,0,0,8" />
+                        <Grid Margin="0,8,0,10">
+                            <m:ArcGauge x:Name="CpuGauge" StartColor="#00E5FF" EndColor="#3D7BFF" Thickness="13" />
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock x:Name="CpuUsageText" Text="--" FontFamily="{StaticResource NumberFont}" FontSize="44"
+                                           FontWeight="Bold" HorizontalAlignment="Center" />
+                                <TextBlock Text="USO" Style="{StaticResource PanelLabel}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <!-- GPU -->
+                <Border Grid.Column="4" Style="{StaticResource PanelCard}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top">
+                            <TextBlock Text="GPU" Style="{StaticResource PanelLabel}" FontSize="13" Foreground="#FF2E88" />
+                            <TextBlock x:Name="GpuNameText" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <UniformGrid DockPanel.Dock="Bottom" Columns="2">
+                            <Border Style="{StaticResource PanelTile}" Margin="0,0,5,0">
+                                <StackPanel>
+                                    <TextBlock Text="TEMPERATURA" Style="{StaticResource PanelLabel}" />
+                                    <TextBlock x:Name="GpuTempText" Text="--" Style="{StaticResource PanelNumber}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource PanelTile}" Margin="5,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="VENTOINHA" Style="{StaticResource PanelLabel}" />
+                                    <TextBlock x:Name="GpuFanText" Text="--" Style="{StaticResource PanelNumber}" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                        <TextBlock x:Name="GpuPowerText" DockPanel.Dock="Bottom" Style="{StaticResource PanelHint}" Margin="0,0,0,8" />
+                        <Grid Margin="0,8,0,10">
+                            <m:ArcGauge x:Name="GpuGauge" StartColor="#FF2E88" EndColor="#A855F7" Thickness="13" />
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock x:Name="GpuUsageText" Text="--" FontFamily="{StaticResource NumberFont}" FontSize="44"
+                                           FontWeight="Bold" HorizontalAlignment="Center" />
+                                <TextBlock Text="USO" Style="{StaticResource PanelLabel}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <!-- Memórias -->
+            <UniformGrid Grid.Row="2" Columns="2" Margin="0,14,0,0">
+                <Border Style="{StaticResource PanelCard}" Margin="0,0,7,0" Padding="20,14">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock x:Name="RamText" DockPanel.Dock="Right" Text="--" FontFamily="{StaticResource NumberFont}" FontSize="15" FontWeight="SemiBold" />
+                            <TextBlock Text="MEMÓRIA RAM" Style="{StaticResource PanelLabel}" FontSize="12" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <Border Height="10" CornerRadius="5" Background="#1C202E" Margin="0,10,0,0">
+                            <Border x:Name="RamBar" CornerRadius="5" HorizontalAlignment="Stretch" RenderTransformOrigin="0,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform ScaleX="0" />
+                                </Border.RenderTransform>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop Color="#00E5FF" Offset="0" />
+                                        <GradientStop Color="#7CFF4F" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                        </Border>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource PanelCard}" Margin="7,0,0,0" Padding="20,14">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock x:Name="VramText" DockPanel.Dock="Right" Text="--" FontFamily="{StaticResource NumberFont}" FontSize="15" FontWeight="SemiBold" />
+                            <TextBlock Text="MEMÓRIA DE VÍDEO (VRAM)" Style="{StaticResource PanelLabel}" FontSize="12" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <Border Height="10" CornerRadius="5" Background="#1C202E" Margin="0,10,0,0">
+                            <Border x:Name="VramBar" CornerRadius="5" HorizontalAlignment="Stretch" RenderTransformOrigin="0,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform ScaleX="0" />
+                                </Border.RenderTransform>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop Color="#FF2E88" Offset="0" />
+                                        <GradientStop Color="#A855F7" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+        </Grid>
+    </Grid>
+</Window>

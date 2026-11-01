@@ -34,6 +34,8 @@
     <Resource Include="Assets\seamline.ico" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.8" />
     <PackageReference Include="Vortice.MediaFoundation" Version="3.8.3" />
     <!-- Direct3D 11: recebe as imagens da captura de janelas (Fase 5). -->
     <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />

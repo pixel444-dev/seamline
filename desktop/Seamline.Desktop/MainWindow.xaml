@@ -91,6 +91,7 @@
 
         <!-- 3. Mover apps e janelas -->
         <ScrollViewer Grid.Row="1" Grid.RowSpan="2" Grid.Column="2" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <DockPanel Margin="0,0,0,12">
@@ -142,6 +143,37 @@
                     </Border>
                 </StackPanel>
             </Border>
+
+            <!-- 4. Painel gamer: FPS, CPU, GPU, RAM e temperaturas -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <Border Style="{StaticResource CardIconBox}" VerticalAlignment="Top">
+                            <TextBlock Style="{StaticResource CardIcon}" Text="&#xE7FC;" />
+                        </Border>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Painel gamer" />
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0"
+                                       Text="FPS, uso e temperatura da CPU e da GPU, RAM e memória de vídeo. Deixe no celular ao lado do monitor enquanto joga." />
+                        </StackPanel>
+                    </DockPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button x:Name="GamerPanelButton" MinWidth="150" Click="GamerPanelButton_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE9D2;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <TextBlock Text="Abrir no PC" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="GamerPhoneButton" MinWidth="150" Margin="8,0,0,0" IsEnabled="False" Click="GamerPhoneButton_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE8EA;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <TextBlock Text="Mostrar no celular" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+          </StackPanel>
         </ScrollViewer>
 
         <!-- Registro do que está acontecendo (útil para achar problemas) -->

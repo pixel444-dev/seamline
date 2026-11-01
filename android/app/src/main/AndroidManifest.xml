@@ -28,6 +28,15 @@
             android:launchMode="singleTask"
             android:taskAffinity="com.seamline.app.pcwindow"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+        <!-- Painel gamer: métricas do PC (FPS, CPU, GPU...). Aberto pelo PC (exported) com a porta do túnel. -->
+        <activity
+            android:name=".GamerPanelActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:exported="true"
+            android:label="Painel gamer"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.seamline.app.gamerpanel"
+            android:theme="@style/Theme.Seamline" />
     </application>
 
 </manifest>
