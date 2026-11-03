@@ -1,10 +1,9 @@
 <div align="center">
 
-<img src="docs/logo.png" alt="Logo do Seamline" width="140">
+<img src="docs/banner.png" alt="Seamline: seu celular Android vira uma extensão do seu PC" width="100%">
 
-# Seamline
+<br>
 
-**Seu celular Android vira uma extensão do PC.**
 Leve o mouse para fora da tela e ele aparece no celular. Puxe um app do celular e ele vira uma janela do Windows.
 
 ![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=for-the-badge&logo=windows&logoColor=white)
@@ -178,7 +177,8 @@ desktop/
 ├── Seamline.Desktop/  → app do Windows (WPF, .NET 10)
 └── tools/             → gera o ícone a partir da logo
 docs/
-└── protocolo.md       → como o PC e o celular conversam
+├── protocolo.md       → como o PC e o celular conversam
+└── banner.svg / .png  → a arte do topo deste README
 ```
 
 ---

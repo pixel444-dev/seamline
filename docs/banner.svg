@@ -1,0 +1,173 @@
+<!--
+  Banner do README (1280 x 640). Mesmas cores e desenho da logo (desktop/Seamline.Desktop/Assets/Logo.xaml).
+  O docs/banner.png é uma captura deste arquivo, em escala 2x, feita com o Edge em modo headless.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <linearGradient id="seam" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#2DD4BF" />
+      <stop offset="0.55" stop-color="#5B8CFF" />
+      <stop offset="1" stop-color="#A78BFA" />
+    </linearGradient>
+    <linearGradient id="seamText" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2DD4BF" />
+      <stop offset="0.55" stop-color="#5B8CFF" />
+      <stop offset="1" stop-color="#A78BFA" />
+    </linearGradient>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#232A3D" />
+      <stop offset="1" stop-color="#10131C" />
+    </linearGradient>
+    <linearGradient id="wallpaper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151A2B" />
+      <stop offset="1" stop-color="#0F1220" />
+    </linearGradient>
+    <radialGradient id="glowTeal">
+      <stop offset="0" stop-color="#2DD4BF" stop-opacity="0.22" />
+      <stop offset="1" stop-color="#2DD4BF" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glowBlue">
+      <stop offset="0" stop-color="#5B8CFF" stop-opacity="0.22" />
+      <stop offset="1" stop-color="#5B8CFF" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glowViolet">
+      <stop offset="0" stop-color="#A78BFA" stop-opacity="0.18" />
+      <stop offset="1" stop-color="#A78BFA" stop-opacity="0" />
+    </radialGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#FFFFFF" fill-opacity="0.07" />
+    </pattern>
+    <filter id="blur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="9" />
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.55" />
+    </filter>
+    <clipPath id="card"><rect width="1280" height="640" rx="28" /></clipPath>
+  </defs>
+
+  <g clip-path="url(#card)" font-family="'Segoe UI Variable Display', 'Segoe UI', Inter, 'Helvetica Neue', Arial, sans-serif">
+    <!-- Fundo -->
+    <rect width="1280" height="640" fill="#0B0D14" />
+    <rect width="1280" height="640" fill="url(#dots)" />
+    <circle cx="930" cy="330" r="430" fill="url(#glowBlue)" />
+    <circle cx="700" cy="560" r="300" fill="url(#glowTeal)" />
+    <circle cx="1200" cy="60" r="320" fill="url(#glowViolet)" />
+    <circle cx="80" cy="40" r="260" fill="url(#glowTeal)" opacity="0.6" />
+
+    <!-- Texto -->
+    <g transform="translate(80 132)">
+      <path d="M23,0 H77 A23,23 0 0 1 100,23 V77 A23,23 0 0 1 77,100 H23 A23,23 0 0 1 0,77 V23 A23,23 0 0 1 23,0 Z"
+            transform="scale(0.68)" fill="url(#tile)" stroke="#2A3145" stroke-width="2" />
+      <g transform="scale(0.68) translate(7 4) scale(0.86)" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M54,24 H86 A5,5 0 0 1 91,29 V53 A5,5 0 0 1 86,58 H54 A5,5 0 0 1 49,53 V29 A5,5 0 0 1 54,24 Z M64,72 H76 M70,58 V72" stroke="#C7CEE0" stroke-width="5" />
+        <path d="M17,30 H35 A6,6 0 0 1 41,36 V76 A6,6 0 0 1 35,82 H17 A6,6 0 0 1 11,76 V36 A6,6 0 0 1 17,30 Z" fill="#161A26" stroke="#C7CEE0" stroke-width="5" />
+        <path d="M26,66 C26,46 39,39 47,45 C54,50 60,49 64.5,41" stroke="url(#seam)" stroke-width="6.5" />
+        <circle cx="26" cy="66" r="5" fill="#2DD4BF" />
+        <path d="M66,36 L66,55 L70.8,50.2 L74.4,58.2 L78.2,56.5 L74.7,48.7 L81.4,48.7 Z" fill="#FFFFFF" stroke="#10131C" stroke-width="2" />
+      </g>
+    </g>
+
+    <text x="76" y="300" font-size="96" font-weight="700" fill="#F2F4F8" letter-spacing="-2">Seamline</text>
+    <text x="80" y="356" font-size="30" fill="#9AA1B4">Seu celular Android vira uma</text>
+    <text x="80" y="398" font-size="30" font-weight="600" fill="url(#seamText)">extensão do seu PC.</text>
+
+    <!-- Etiquetas -->
+    <g font-size="18" font-weight="600" fill="#E8EAF0">
+      <rect x="80" y="440" width="196" height="42" rx="21" fill="#171A23" stroke="#262B3A" stroke-width="1.5" />
+      <circle cx="102" cy="461" r="5" fill="#2DD4BF" />
+      <text x="116" y="467">Mouse pela borda</text>
+
+      <rect x="288" y="440" width="186" height="42" rx="21" fill="#171A23" stroke="#262B3A" stroke-width="1.5" />
+      <circle cx="310" cy="461" r="5" fill="#5B8CFF" />
+      <text x="324" y="467">Apps em janelas</text>
+
+      <rect x="486" y="440" width="156" height="42" rx="21" fill="#171A23" stroke="#262B3A" stroke-width="1.5" />
+      <circle cx="508" cy="461" r="5" fill="#A78BFA" />
+      <text x="522" y="467">Painel gamer</text>
+    </g>
+    <text x="80" y="532" font-size="18" fill="#6B7287" letter-spacing="0.5">Windows  ·  Android  ·  USB ou Wi-Fi</text>
+
+    <!-- Ilustração (um pouco para a direita, para não encostar nas etiquetas) -->
+    <g transform="translate(28 0)">
+    <!-- Monitor -->
+    <g filter="url(#shadow)">
+      <rect x="760" y="150" width="440" height="272" rx="18" fill="#161A26" stroke="#C7CEE0" stroke-width="6" />
+    </g>
+    <rect x="774" y="164" width="412" height="244" rx="8" fill="url(#wallpaper)" />
+    <path d="M980,422 V470 M928,476 H1032" stroke="#C7CEE0" stroke-width="8" stroke-linecap="round" fill="none" />
+
+    <!-- Barra de tarefas -->
+    <rect x="774" y="388" width="412" height="20" fill="#0B0D14" fill-opacity="0.75" />
+    <g fill="#353B4E">
+      <rect x="944" y="393" width="10" height="10" rx="2.5" />
+      <rect x="960" y="393" width="10" height="10" rx="2.5" fill="#4F7CFF" />
+      <rect x="976" y="393" width="10" height="10" rx="2.5" />
+      <rect x="992" y="393" width="10" height="10" rx="2.5" fill="#2DD4BF" />
+      <rect x="1008" y="393" width="10" height="10" rx="2.5" />
+    </g>
+
+    <!-- Janela de um app do celular, aberta no PC -->
+    <g filter="url(#shadow)">
+      <rect x="1000" y="182" width="164" height="190" rx="8" fill="#171A23" stroke="#353B4E" stroke-width="1.5" />
+    </g>
+    <path d="M1008,182 H1156 A8,8 0 0 1 1164,190 V204 H1000 V190 A8,8 0 0 1 1008,182 Z" fill="#1E2230" />
+    <circle cx="1012" cy="193" r="4" fill="#2DD4BF" />
+    <rect x="1022" y="190" width="48" height="6" rx="3" fill="#6B7287" />
+    <g stroke="#9AA1B4" stroke-width="1.6" stroke-linecap="round">
+      <path d="M1126,193 H1132" />
+      <rect x="1139" y="189" width="7" height="7" rx="1" fill="none" />
+      <path d="M1153,189 L1160,196 M1160,189 L1153,196" />
+    </g>
+    <rect x="1012" y="216" width="96" height="26" rx="10" fill="#1E2230" />
+    <rect x="1050" y="250" width="102" height="26" rx="10" fill="#2B3A66" />
+    <rect x="1012" y="284" width="76" height="26" rx="10" fill="#1E2230" />
+    <rect x="1066" y="318" width="86" height="26" rx="10" fill="#2B3A66" />
+    <rect x="1010" y="352" width="144" height="12" rx="6" fill="#0F1117" stroke="#262B3A" />
+
+    <!-- Celular (na frente do monitor, como na logo) -->
+    <g filter="url(#shadow)">
+      <rect x="640" y="214" width="164" height="330" rx="28" fill="#161A26" stroke="#C7CEE0" stroke-width="6" />
+    </g>
+    <rect x="653" y="227" width="138" height="304" rx="18" fill="#0F1220" />
+    <rect x="707" y="236" width="30" height="7" rx="3.5" fill="#262B3A" />
+
+    <!-- Painel gamer na tela do celular -->
+    <text x="666" y="272" font-size="10" font-weight="700" fill="#6B7287" letter-spacing="2">PAINEL GAMER</text>
+    <text x="664" y="322" font-size="48" font-weight="800" fill="url(#seamText)" letter-spacing="-1">144</text>
+    <text x="752" y="320" font-size="14" font-weight="700" fill="#9AA1B4">FPS</text>
+    <g font-size="10" font-weight="600" fill="#9AA1B4">
+      <text x="666" y="350">CPU</text><text x="778" y="350" text-anchor="end" fill="#E8EAF0">62%</text>
+      <rect x="666" y="356" width="112" height="6" rx="3" fill="#1E2230" />
+      <rect x="666" y="356" width="69" height="6" rx="3" fill="#2DD4BF" />
+      <text x="666" y="380">GPU</text><text x="778" y="380" text-anchor="end" fill="#E8EAF0">88%</text>
+      <rect x="666" y="386" width="112" height="6" rx="3" fill="#1E2230" />
+      <rect x="666" y="386" width="99" height="6" rx="3" fill="#5B8CFF" />
+      <text x="666" y="410">TEMP</text><text x="778" y="410" text-anchor="end" fill="#E8EAF0">68 °C</text>
+      <rect x="666" y="416" width="112" height="6" rx="3" fill="#1E2230" />
+      <rect x="666" y="416" width="76" height="6" rx="3" fill="#A78BFA" />
+    </g>
+
+    <!-- A costura: sai do celular e entra no monitor, com brilho -->
+    <path d="M694,484 C770,484 790,400 846,392 C890,386 912,360 934,322" stroke="url(#seam)" stroke-width="16" stroke-linecap="round" fill="none" filter="url(#blur)" opacity="0.9" />
+    <path d="M694,484 C770,484 790,400 846,392 C890,386 912,360 934,322" stroke="url(#seam)" stroke-width="10" stroke-linecap="round" fill="none" />
+    <circle cx="694" cy="484" r="16" fill="#2DD4BF" opacity="0.35" filter="url(#blur)" />
+    <circle cx="694" cy="484" r="9" fill="#2DD4BF" />
+    <circle cx="694" cy="484" r="3.5" fill="#E8FFFB" />
+
+    <!-- Setinha do mouse na ponta (mesmo desenho da logo, ampliado) -->
+    <path d="M66,36 L66,55 L70.8,50.2 L74.4,58.2 L78.2,56.5 L74.7,48.7 L81.4,48.7 Z"
+          transform="translate(937 310) scale(2.3) translate(-66 -36)"
+          fill="#FFFFFF" stroke="#10131C" stroke-width="1.6" stroke-linejoin="round" />
+
+    <!-- Brilhinhos -->
+    <g fill="#FFFFFF">
+      <circle cx="812" cy="318" r="2" opacity="0.7" />
+      <circle cx="880" cy="420" r="1.6" opacity="0.5" />
+      <circle cx="690" cy="196" r="1.8" opacity="0.5" />
+      <circle cx="1222" cy="470" r="2" opacity="0.4" />
+      <circle cx="604" cy="300" r="1.5" opacity="0.4" />
+    </g>
+    </g>
+  </g>
+</svg>
