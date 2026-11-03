@@ -22,3 +22,6 @@ obj/
 # Sistema
 Thumbs.db
 .DS_Store
+
+# Anotações internas (não vão para o GitHub)
+BRIEFING.md
