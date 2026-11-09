@@ -11,6 +11,8 @@ Leve o mouse para fora da tela e ele aparece no celular. Puxe um app do celular 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)
 
+[![Baixar o instalador](https://img.shields.io/github/v/release/pixel444-dev/seamline?style=for-the-badge&label=Baixar%20o%20instalador&color=2EA043)](https://github.com/pixel444-dev/seamline/releases/latest)
+
 </div>
 
 ---
@@ -98,20 +100,35 @@ O protocolo entre os dois lados (mensagens JSON + fluxos de vídeo) está descri
 
 ---
 
-## 📦 Requisitos
+## 📥 Baixar e usar (sem programar nada)
+
+Na página de **[Releases](https://github.com/pixel444-dev/seamline/releases/latest)**, baixe o **`Seamline-Setup-<versão>.exe`** e instale. Ele já traz tudo o que precisa (o .NET e o `adb`): não é preciso instalar Android Studio nem mais nada. O app do celular é instalado sozinho pelo PC na primeira vez que ele for usado.
 
 | No PC | No celular |
 |---|---|
-| Windows 10 versão 2004 ou mais novo (testado no Windows 11) | Android 11 ou mais novo; o mouse pela borda precisa do **Android 16** (testado nele) |
-| [.NET 10 SDK](https://dotnet.microsoft.com/download) | **Opções do desenvolvedor** ativadas |
-| [Android Studio](https://developer.android.com/studio) (traz o JDK 21 e o `adb`) | **Depuração USB** ou **Depuração sem fio** ligada |
+| Windows 10 versão 2004 ou mais novo, 64 bits (testado no Windows 11) | Android 11 ou mais novo; o mouse pela borda precisa do **Android 16** (testado nele) |
+| | **Opções do desenvolvedor** ativadas (Configurações → Sobre o telefone → toque 7 vezes em *Número da versão*) |
+| | **Depuração USB** ou **Depuração sem fio** ligada (dentro das Opções do desenvolvedor) |
+
+Depois de instalar:
+1. Abra o **Seamline** pelo menu Iniciar.
+2. Ligue o celular no PC pelo cabo, ou clique em **Parear pelo Wi-Fi...** e leia o QR code em *Opções do desenvolvedor → Depuração sem fio → Parear dispositivo com código QR*.
+3. Escolha o celular na lista e clique em **Conectar**.
+4. Leve o mouse para a borda esquerda do monitor: ele passa para o celular. 🎉
+
+Outras opções na mesma página: **`Seamline-<versão>-portatil.zip`** (sem instalar: descompacte e abra o `Seamline.exe`) e **`Seamline-<versão>-celular.apk`** (o app do celular avulso, caso queira instalar à mão).
+
+> [!NOTE]
+> Como o instalador ainda não tem assinatura digital, o Windows pode mostrar *"O Windows protegeu o computador"*. Clique em **Mais informações → Executar assim mesmo**. Pelo Wi-Fi, o PC e o celular precisam estar na mesma rede, e o Firewall do Windows pode perguntar se libera o `adb`: libere em redes privadas.
 
 > [!NOTE]
 > O **FPS** e a **temperatura da CPU** do painel gamer só funcionam com o Seamline aberto como administrador (o Windows exige). A temperatura da CPU também precisa do driver [PawnIO](https://pawnio.eu). O próprio painel tem um botão que reabre o app como administrador.
 
 ---
 
-## 🚀 Como compilar e rodar
+## 🚀 Como compilar e rodar (para quem quer mexer no código)
+
+Precisa de: [.NET 10 SDK](https://dotnet.microsoft.com/download) e [Android Studio](https://developer.android.com/studio) (traz o JDK 21 e o `adb`).
 
 A ordem importa: o programa do PC leva junto os APKs do Android.
 
@@ -131,10 +148,15 @@ dotnet build Seamline.slnx
 
 O executável fica em `desktop/Seamline.Desktop/bin/Debug/net10.0-windows10.0.19041.0/Seamline.exe`.
 
-**3. Usar:**
-1. Ligue o celular no PC pelo cabo, ou clique em **Parear pelo Wi-Fi...** e leia o QR code em *Opções do desenvolvedor → Depuração sem fio → Parear dispositivo com código QR*.
-2. Escolha o celular na lista e clique em **Conectar**.
-3. Leve o mouse para a borda esquerda do monitor: ele passa para o celular. 🎉
+**3. Usar:** igual aos passos de [Baixar e usar](#-baixar-e-usar-sem-programar-nada).
+
+**Gerar o instalador** (precisa também do [Inno Setup 6](https://jrsoftware.org/isinfo.php): `winget install JRSoftware.InnoSetup`):
+
+```bash
+powershell -ExecutionPolicy Bypass -File instalador/gerar-instalador.ps1
+```
+
+Compila os dois lados e deixa em `instalador/saida/` o instalador, o `.zip` portátil e o APK. A versão vem do `<Version>` em `Seamline.Desktop.csproj`.
 
 > [!TIP]
 > Para o teclado ABNT2 sair certo no celular, com o cursor lá, vá em *Configurações → Gerenciamento geral → Teclado físico → Seamline Keyboard* e escolha **Português (Brasil)**.
@@ -176,6 +198,7 @@ android/
 desktop/
 ├── Seamline.Desktop/  → app do Windows (WPF, .NET 10)
 └── tools/             → gera o ícone a partir da logo
+instalador/            → script que gera o instalador do Windows (Inno Setup)
 docs/
 ├── protocolo.md       → como o PC e o celular conversam
 └── banner.svg / .png  → a arte do topo deste README

@@ -22,7 +22,10 @@ public sealed class AdbClient(string adbPath)
 {
     public string AdbPath { get; } = adbPath;
 
-    /// <summary>Procura o adb na mesma ordem do scrcpy: variável ADB, depois o Android SDK, depois o PATH.</summary>
+    /// <summary>
+    /// Procura o adb: variável ADB, depois o Android SDK (quem desenvolve), depois o adb que vem
+    /// junto no instalador (pasta "adb" ao lado do .exe), depois o PATH.
+    /// </summary>
     public static AdbClient Locate()
     {
         var candidates = new List<string?>
@@ -30,6 +33,7 @@ public sealed class AdbClient(string adbPath)
             Environment.GetEnvironmentVariable("ADB"),
             CombineIfSet(Environment.GetEnvironmentVariable("ANDROID_HOME"), "platform-tools", "adb.exe"),
             CombineIfSet(Environment.GetEnvironmentVariable("LOCALAPPDATA"), "Android", "Sdk", "platform-tools", "adb.exe"),
+            Path.Combine(AppContext.BaseDirectory, "adb", "adb.exe"),
         };
         var found = candidates.FirstOrDefault(p => p is not null && File.Exists(p));
         return new AdbClient(found ?? "adb");

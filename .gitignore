@@ -25,3 +25,6 @@ Thumbs.db
 
 # Anotações internas (não vão para o GitHub)
 BRIEFING.md
+
+# Instalador gerado (vai para a página de Releases do GitHub, não para o git)
+instalador/saida/

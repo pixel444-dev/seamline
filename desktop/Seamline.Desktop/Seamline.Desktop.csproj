@@ -8,6 +8,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <AssemblyName>Seamline</AssemblyName>
+    <!-- Versão mostrada no instalador e nas propriedades do .exe (mantenha igual à do app Android). -->
+    <Version>0.1.0</Version>
+    <!-- Só as traduções do .NET/WPF que usamos (as outras só deixariam o instalador maior). -->
+    <SatelliteResourceLanguages>pt-BR;en</SatelliteResourceLanguages>
     <!-- A conversão de cor dos quadros de vídeo usa ponteiros, por desempenho. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
